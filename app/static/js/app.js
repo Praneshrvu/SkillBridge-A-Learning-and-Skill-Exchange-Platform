@@ -870,7 +870,7 @@ async function loadMyUserSkills() {
             ${s.hourly_rate > 0 ? `<span style="font-size: 0.8rem; color: #991b1b; margin-left: 0.4rem;">Fee: $${s.hourly_rate}/hr</span>` : ''}
             
             ${isTeacher && s.explanation_style ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 3px;"><strong>Style:</strong> ${escapeHtml(s.explanation_style)}</div>` : ''}
-            {!isTeacher && s.learning_goal ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 3px;"><strong>Goal:</strong> ${escapeHtml(s.learning_goal)}</div>` : ''}
+            ${!isTeacher && s.learning_goal ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 3px;"><strong>Goal:</strong> ${escapeHtml(s.learning_goal)}</div>` : ''}
           </div>
           <button class="btn btn-secondary btn-sm" onclick="deleteUserSkill(${s.id})">✕ Remove</button>
         </div>
