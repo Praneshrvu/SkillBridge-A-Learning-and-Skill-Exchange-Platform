@@ -54,10 +54,16 @@ SkillBridge is built as a modular RESTful microservice with clean separation of 
 
 ## 🌟 Key Features
 
-### 1. 🔒 Confidentiality & Privacy Control (Anonymous Mentorship)
-- Users can enable **Confidential Mode** (`is_confidential = True`) upon registration or toggle it anytime from their profile.
-- **When Active**: Only their public display name (e.g. `StealthKernelDev`) and what they teach / explanation style are visible. Real name, email address, phone number, company, and personal biography are automatically masked by the API.
-- Enables working professionals or shy peers to share knowledge comfortably without exposing their personal identities.
+### 1. 🔒 Granular Confidentiality Options for Both Teachers & Learners
+- **For the Teacher (Offering to Teach)**:
+  - Can choose whether to reveal their real identity or keep their teaching profile confidential.
+  - If confidential: only their alias (e.g. `StealthArchitect_99`), what they teach, and what they are good at explaining are shown. Real name, email, phone, company, and bio are hidden.
+- **For the Learner (Person Wanting to Get Taught)**:
+  - Has the exact same confidentiality option!
+  - Can browse and list skills they want to learn either publicly or confidentially.
+  - If confidential: only their alias (e.g. `StealthLearner_Maya`) and their learning goals / what they need explained are visible to mentors.
+- **Learners & Teachers Dual Catalog**:
+  - The catalog allows toggling between **👨‍🏫 Browse Teachers (People Offering to Teach)** and **🎓 Browse Learners (People Looking to be Taught)**, with dedicated privacy filters on both!
 
 ### 2. 🤝 Dual Exchange Modes: Barter vs Paid Tutoring
 - **Skill-for-Skill Barter ($0 Swap)**: 
