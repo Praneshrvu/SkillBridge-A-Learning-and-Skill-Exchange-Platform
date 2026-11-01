@@ -11,10 +11,13 @@ let masterSkills = [];
 const DEMO_USERS = {
   alice: { email: 'alice@skillbridge.dev', pass: 'pass123', label: 'Alice Chen (Knows C++, Wants Java)' },
   bob: { email: 'bob@skillbridge.dev', pass: 'pass123', label: 'Bob Smith (Knows Java, Wants C++)' },
-  confidential: { email: 'anonymous_guru@skillbridge.dev', pass: 'pass123', label: 'StealthCodeExpert (Confidential Mode ON)' },
+  confidential: { email: 'anonymous_guru@skillbridge.dev', pass: 'pass123', label: 'StealthCodeExpert (Confidential Teacher Mode)' },
+  maya: { email: 'maya.learner@skillbridge.dev', pass: 'pass123', label: 'Maya Lin (Confidential Learner Mode)' },
   sarah: { email: 'sarah.google@skillbridge.dev', pass: 'pass123', label: 'Sarah Jenkins (Google Staff Eng - Free AMA)' },
   rahul: { email: 'rahul.amazon@skillbridge.dev', pass: 'pass123', label: 'Rahul Sharma (Amazon Solutions Arch - $25/hr)' }
 };
+
+let currentCatalogType = 'TEACH'; // 'TEACH' (browse teachers) or 'LEARN' (browse learners)
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
@@ -136,31 +139,59 @@ function updateHeaderUserUI() {
   const container = document.getElementById('user-header-info');
   if (!container || !currentUser) return;
 
-  const confBadge = currentUser.is_confidential
-    ? `<span class="confidential-pill active" title="Your identity is confidential. Only display name and teaching abilities are public.">🔒 Confidential Mode: ON</span>`
-    : `<span class="confidential-pill inactive" title="Your full name, bio, and company are visible publicly.">👁️ Public Identity</span>`;
+  let badges = '';
+  if (currentUser.is_confidential) {
+    badges = `<span class="confidential-pill active" title="Your overall identity is confidential. Only display name and abilities are public.">🔒 Master Confidential: ON</span>`;
+  } else {
+    const tBadge = currentUser.is_confidential_teacher
+      ? `<span class="confidential-pill active" title="Teacher profile confidential: only alias and what you teach visible">🔒 Teacher: Confidential</span>`
+      : `<span class="confidential-pill inactive" title="Teacher profile public">👁️ Teacher: Public</span>`;
+    
+    const lBadge = currentUser.is_confidential_learner
+      ? `<span class="confidential-pill active" title="Learner profile confidential: identity hidden when seeking to learn">🔒 Learner: Confidential</span>`
+      : `<span class="confidential-pill inactive" title="Learner profile public">👁️ Learner: Public</span>`;
+    badges = `${tBadge} ${lBadge}`;
+  }
 
   container.innerHTML = `
     <div style="text-align: right; line-height: 1.2;">
       <div style="font-weight: 700; font-size: 0.95rem;">${currentUser.display_name}</div>
       <div style="font-size: 0.75rem; color: #94a3b8;">${currentUser.email}</div>
     </div>
-    ${confBadge}
+    <div style="display: flex; gap: 0.35rem;">
+      ${badges}
+    </div>
   `;
 }
 
-// 1. TEACHER CATALOG
+function setCatalogType(type) {
+  currentCatalogType = type;
+  const btnT = document.getElementById('btn-view-teachers');
+  const btnL = document.getElementById('btn-view-learners');
+  if (btnT && btnL) {
+    if (type === 'TEACH') {
+      btnT.className = 'btn btn-primary';
+      btnL.className = 'btn btn-outline';
+    } else {
+      btnT.className = 'btn btn-outline';
+      btnL.className = 'btn btn-primary';
+    }
+  }
+  loadTeacherCatalog();
+}
+
+// 1. TEACHER & LEARNER CATALOG
 async function loadTeacherCatalog() {
   const grid = document.getElementById('catalog-grid');
   if (!grid) return;
-  grid.innerHTML = '<div style="padding: 2rem; color: #64748b;">Loading skill catalog...</div>';
+  grid.innerHTML = `<div style="padding: 2rem; color: #64748b;">Loading ${currentCatalogType === 'TEACH' ? 'teachers' : 'learners'} catalog...</div>`;
 
   const skillFilter = document.getElementById('filter-skill-select')?.value || '';
   const modeFilter = document.getElementById('filter-mode-select')?.value || '';
   const confidentialFilter = document.getElementById('filter-confidential-select')?.value || '';
   const search = document.getElementById('catalog-search')?.value || '';
 
-  let url = `${API_BASE}/skills/catalog?`;
+  let url = `${API_BASE}/skills/catalog?skill_type=${currentCatalogType}&`;
   if (skillFilter) url += `skill_id=${skillFilter}&`;
   if (modeFilter) url += `exchange_mode=${modeFilter}&`;
   if (confidentialFilter !== '') url += `confidential_only=${confidentialFilter}&`;
@@ -170,21 +201,27 @@ async function loadTeacherCatalog() {
     const res = await fetch(url);
     const catalog = await res.json();
     if (!catalog.length) {
-      grid.innerHTML = '<div style="grid-column: 1/-1; padding: 2rem; text-align: center; color: #64748b;">No teachers found matching your filters.</div>';
+      grid.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem; text-align: center; color: #64748b;">No ${currentCatalogType === 'TEACH' ? 'teachers' : 'learners'} found matching your filters.</div>`;
       return;
     }
 
     grid.innerHTML = catalog.map(item => {
       const isMe = currentUser && currentUser.id === item.user_id;
-      const privacyBadge = item.is_confidential 
-        ? `<span class="confidential-pill active" title="Identity protected: only alias & skills shown">🔒 Anonymous Mentor</span>` 
-        : (item.company ? `<span class="author-company">🏢 ${item.company}</span>` : `<span style="font-size: 0.8rem; color: #64748b;">Verified Peer</span>`);
+      const isTeacher = (item.skill_type === 'TEACH');
+
+      let privacyBadge = '';
+      if (item.is_confidential) {
+        privacyBadge = `<span class="confidential-pill active" title="Identity protected by user choice: real name & personal details masked">🔒 Confidential ${isTeacher ? 'Teacher' : 'Learner'}</span>`;
+      } else {
+        const companyStr = item.company ? ` • 🏢 ${item.company}` : '';
+        privacyBadge = `<span class="confidential-pill inactive" title="Real identity visible">👁️ Public Profile${companyStr}</span>`;
+      }
 
       let modeBadge = '';
       if (item.exchange_preference === 'BARTER_ONLY') {
         modeBadge = '<span class="badge-tag badge-barter">Skill Barter (Free Swap)</span>';
       } else if (item.exchange_preference === 'PAID_ONLY') {
-        modeBadge = `<span class="badge-tag badge-paid">Paid Tutoring ($${item.hourly_rate}/hr)</span>`;
+        modeBadge = `<span class="badge-tag badge-paid">Paid Mentorship ($${item.hourly_rate}/hr)</span>`;
       } else if (item.exchange_preference === 'VOLUNTEER_FREE') {
         modeBadge = '<span class="badge-tag badge-free">Free Mentorship</span>';
       } else {
@@ -205,26 +242,39 @@ async function loadTeacherCatalog() {
             </div>
             
             <div class="card-body">
+              <div style="font-size: 0.75rem; color: #4338ca; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
+                ${isTeacher ? 'Offering to Teach' : 'Wants to Learn'}
+              </div>
               <h3>${item.skill_name}</h3>
               <p style="font-size: 0.8rem; color: #6366f1; font-weight: 600; margin-bottom: 0.5rem;">${item.category}</p>
-              <div class="card-desc">
-                <strong>Explaining Style:</strong> ${item.explanation_style || 'Explains concepts clearly with real-world examples.'}
-              </div>
-              <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">
-                ⏳ <strong>Experience:</strong> ${item.years_of_experience} yrs
-              </div>
+              
+              ${isTeacher ? `
+                <div class="card-desc">
+                  <strong>Good at Explaining:</strong> ${item.explanation_style || 'Explains concepts clearly with real-world examples.'}
+                </div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">
+                  ⏳ <strong>Experience:</strong> ${item.years_of_experience} yrs
+                </div>
+              ` : `
+                <div class="card-desc">
+                  <strong>Learning Objective / Goal:</strong> ${item.learning_goal || item.explanation_style || 'Seeking peer guidance and conceptual explanations.'}
+                </div>
+              `}
               <div>${modeBadge}</div>
             </div>
           </div>
 
           <div class="card-footer">
             <div class="price-tag">
-              ${item.hourly_rate > 0 ? `$${item.hourly_rate} <span style="font-size: 0.75rem; font-weight: normal; color: #64748b;">/hr</span>` : `<span style="color: #059669;">Free / Barter</span>`}
+              ${isTeacher 
+                ? (item.hourly_rate > 0 ? `$${item.hourly_rate} <span style="font-size: 0.75rem; font-weight: normal; color: #64748b;">/hr</span>` : `<span style="color: #059669;">Free / Barter</span>`)
+                : `<span style="color: #4338ca; font-size: 0.9rem;">Learner Seeking Mentor</span>`
+              }
             </div>
             ${isMe 
               ? `<span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">(Your Listing)</span>` 
-              : `<button class="btn btn-primary btn-sm" onclick="openExchangeModal(${item.user_id}, '${escapeHtml(item.display_name)}', '${escapeHtml(item.skill_name)}', ${item.hourly_rate}, '${item.exchange_preference}')">
-                  Exchange / Request
+              : `<button class="btn btn-primary btn-sm" onclick="openExchangeModal(${item.user_id}, '${escapeHtml(item.display_name)}', '${escapeHtml(item.skill_name)}', ${item.hourly_rate}, '${item.exchange_preference}', '${item.skill_type}')">
+                  ${isTeacher ? 'Request Tutoring / Barter' : 'Offer to Teach / Barter'}
                 </button>`
             }
           </div>
@@ -695,36 +745,52 @@ async function loadMyProfile() {
   document.getElementById('prof-company').value = currentUser.company || '';
   document.getElementById('prof-job-title').value = currentUser.job_title || '';
   document.getElementById('prof-bio').value = currentUser.bio || '';
-  document.getElementById('prof-confidential-toggle').checked = currentUser.is_confidential;
+  
+  // Confidentiality toggles
+  document.getElementById('prof-confidential-toggle').checked = Boolean(currentUser.is_confidential);
+  const tToggle = document.getElementById('prof-conf-teacher-toggle');
+  if (tToggle) tToggle.checked = Boolean(currentUser.is_confidential_teacher);
+  const lToggle = document.getElementById('prof-conf-learner-toggle');
+  if (lToggle) lToggle.checked = Boolean(currentUser.is_confidential_learner);
 
-  updatePrivacyPreview(currentUser.is_confidential);
+  updatePrivacyPreview();
   loadMyUserSkills();
 }
 
-function updatePrivacyPreview(isConfidential) {
+function updatePrivacyPreview() {
   const preview = document.getElementById('privacy-preview-box');
-  if (!preview) return;
+  if (!preview || !currentUser) return;
 
-  if (isConfidential) {
-    preview.innerHTML = `
-      <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; color: #92400e;">
-        <strong>🔒 Confidential Profile Mode Active:</strong><br>
-        Other users and the public will <strong>ONLY</strong> see your display name (<em>${currentUser.display_name}</em>) and what skills you teach or explain.<br>
-        Your real name (<em>${currentUser.full_name}</em>), email, phone, company, and personal biography are <strong>hidden and masked</strong>.
+  const isMaster = document.getElementById('prof-confidential-toggle')?.checked || false;
+  const isTeacherConf = isMaster || (document.getElementById('prof-conf-teacher-toggle')?.checked || false);
+  const isLearnerConf = isMaster || (document.getElementById('prof-conf-learner-toggle')?.checked || false);
+
+  preview.innerHTML = `
+    <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.9rem; font-size: 0.85rem; line-height: 1.45;">
+      <div style="font-weight: 700; color: #0f172a; margin-bottom: 0.35rem;">Live Privacy Status for Your Profile:</div>
+      <div style="margin-bottom: 0.25rem;">
+        👨‍🏫 <strong>Teaching Profile:</strong> 
+        ${isTeacherConf 
+          ? '<span style="color: #92400e; font-weight: 600;">🔒 Confidential (Only alias & teaching abilities shown; identity masked)</span>'
+          : '<span style="color: #1e40af; font-weight: 600;">👁️ Public (Full name, company & bio visible)</span>'
+        }
       </div>
-    `;
-  } else {
-    preview.innerHTML = `
-      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; color: #1e40af;">
-        <strong>👁️ Public Profile Mode:</strong><br>
-        Your full profile details (Full Name: <em>${currentUser.full_name}</em>, Company: <em>${currentUser.company || 'None'}</em>, Bio) are visible to members.
+      <div>
+        🎓 <strong>Learner Profile (Wanna Get Taught):</strong> 
+        ${isLearnerConf 
+          ? '<span style="color: #92400e; font-weight: 600;">🔒 Confidential (Only alias & learning goals shown; identity masked)</span>'
+          : '<span style="color: #1e40af; font-weight: 600;">👁️ Public (Full profile visible)</span>'
+        }
       </div>
-    `;
-  }
+    </div>
+  `;
 }
 
 async function saveProfileSettings() {
   const isConfidential = document.getElementById('prof-confidential-toggle').checked;
+  const isConfTeacher = document.getElementById('prof-conf-teacher-toggle')?.checked || false;
+  const isConfLearner = document.getElementById('prof-conf-learner-toggle')?.checked || false;
+
   const payload = {
     display_name: document.getElementById('prof-display-name').value.trim(),
     full_name: document.getElementById('prof-full-name').value.trim(),
@@ -732,7 +798,9 @@ async function saveProfileSettings() {
     company: document.getElementById('prof-company').value.trim(),
     job_title: document.getElementById('prof-job-title').value.trim(),
     bio: document.getElementById('prof-bio').value.trim(),
-    is_confidential: isConfidential
+    is_confidential: isConfidential,
+    is_confidential_teacher: isConfTeacher,
+    is_confidential_learner: isConfLearner
   };
 
   try {
@@ -747,11 +815,25 @@ async function saveProfileSettings() {
     if (res.ok) {
       currentUser = await res.json();
       updateHeaderUserUI();
-      updatePrivacyPreview(currentUser.is_confidential);
+      updatePrivacyPreview();
       showToast('Profile and privacy settings saved!');
+      loadTeacherCatalog();
     }
   } catch (err) {
     console.error('Error saving profile:', err);
+  }
+}
+
+function toggleSkillTypeInputs() {
+  const skillType = document.getElementById('profile-skill-type')?.value;
+  const teachBox = document.getElementById('teach-style-group');
+  const learnBox = document.getElementById('learn-goal-group');
+  if (skillType === 'LEARN') {
+    if (teachBox) teachBox.style.display = 'none';
+    if (learnBox) learnBox.style.display = 'block';
+  } else {
+    if (teachBox) teachBox.style.display = 'block';
+    if (learnBox) learnBox.style.display = 'none';
   }
 }
 
@@ -770,20 +852,30 @@ async function loadMyUserSkills() {
       return;
     }
 
-    container.innerHTML = skills.map(s => `
-      <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem;">
-        <div>
-          <span class="badge-tag ${s.skill_type === 'TEACH' ? 'badge-barter' : 'badge-free'}">
-            ${s.skill_type}
-          </span>
-          <strong style="margin-left: 0.5rem; color: #1e293b;">${s.skill.name}</strong>
-          <span style="font-size: 0.8rem; color: #64748b; margin-left: 0.5rem;">(${s.proficiency_level})</span>
-          ${s.hourly_rate > 0 ? `<span style="font-size: 0.8rem; color: #991b1b; margin-left: 0.5rem;">Fee: $${s.hourly_rate}/hr</span>` : ''}
-          ${s.explanation_style ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 2px;">Style: ${escapeHtml(s.explanation_style)}</div>` : ''}
+    container.innerHTML = skills.map(s => {
+      const isTeacher = s.skill_type === 'TEACH';
+      const confBadge = s.is_confidential 
+        ? `<span class="badge-tag" style="background: #fef3c7; color: #92400e;">🔒 Confidential ${isTeacher ? 'Teacher' : 'Learner'}</span>`
+        : `<span class="badge-tag" style="background: #eff6ff; color: #1e40af;">👁️ Public</span>`;
+
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span class="badge-tag ${isTeacher ? 'badge-barter' : 'badge-free'}">
+              ${isTeacher ? '👨‍🏫 TEACH' : '🎓 LEARN'}
+            </span>
+            ${confBadge}
+            <strong style="margin-left: 0.4rem; color: #1e293b;">${s.skill.name}</strong>
+            <span style="font-size: 0.8rem; color: #64748b; margin-left: 0.4rem;">(${s.proficiency_level})</span>
+            ${s.hourly_rate > 0 ? `<span style="font-size: 0.8rem; color: #991b1b; margin-left: 0.4rem;">Fee: $${s.hourly_rate}/hr</span>` : ''}
+            
+            ${isTeacher && s.explanation_style ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 3px;"><strong>Style:</strong> ${escapeHtml(s.explanation_style)}</div>` : ''}
+            {!isTeacher && s.learning_goal ? `<div style="font-size: 0.8rem; color: #475569; margin-top: 3px;"><strong>Goal:</strong> ${escapeHtml(s.learning_goal)}</div>` : ''}
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="deleteUserSkill(${s.id})">✕ Remove</button>
         </div>
-        <button class="btn btn-secondary btn-sm" onclick="deleteUserSkill(${s.id})">✕ Remove</button>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
   } catch (err) {
     container.innerHTML = '<div style="color: #ef4444;">Error loading your skills.</div>';
@@ -796,7 +888,9 @@ async function addSkillToProfile() {
   const proficiency = document.getElementById('profile-skill-prof').value;
   const rate = parseFloat(document.getElementById('profile-skill-rate').value) || 0.0;
   const pref = document.getElementById('profile-skill-pref').value;
-  const expStyle = document.getElementById('profile-skill-style').value.trim();
+  const expStyle = document.getElementById('profile-skill-style')?.value.trim() || null;
+  const learnGoal = document.getElementById('profile-skill-goal')?.value.trim() || null;
+  const isConf = document.getElementById('profile-skill-confidential')?.checked || false;
 
   if (!skillId) {
     showToast('Please select a skill', 'error');
@@ -813,10 +907,12 @@ async function addSkillToProfile() {
       body: JSON.stringify({
         skill_id: parseInt(skillId),
         skill_type: skillType,
+        is_confidential: isConf,
         proficiency_level: proficiency,
         hourly_rate: rate,
         exchange_preference: pref,
         explanation_style: expStyle,
+        learning_goal: learnGoal,
         years_of_experience: 2.0
       })
     });
@@ -852,21 +948,26 @@ async function deleteUserSkill(id) {
 }
 
 // MODALS HANDLING
-function openExchangeModal(userId, displayName, skillName, hourlyRate, pref) {
+function openExchangeModal(userId, displayName, skillName, hourlyRate, pref, targetRole = 'TEACH') {
   document.getElementById('exchange-modal').classList.add('active');
   document.getElementById('req-receiver-id').value = userId;
   document.getElementById('req-teacher-display').innerText = displayName;
-  document.getElementById('req-skill-display').innerText = skillName;
+  document.getElementById('req-skill-display').innerText = (targetRole === 'LEARN' ? `Offering to Teach: ${skillName}` : skillName);
   document.getElementById('req-price-display').innerText = hourlyRate > 0 ? `$${hourlyRate}/hr` : 'Free / Barter';
 
-  // Find requested skill id from masterSkills
+  // Find skill id from masterSkills
   const foundSkill = masterSkills.find(s => s.name === skillName);
   if (foundSkill) {
-    document.getElementById('req-requested-skill-id').value = foundSkill.id;
+    if (targetRole === 'LEARN') {
+      document.getElementById('req-offer-skill').value = foundSkill.id;
+      document.getElementById('req-requested-skill-id').value = foundSkill.id;
+    } else {
+      document.getElementById('req-requested-skill-id').value = foundSkill.id;
+    }
   }
 
   // Pre-set rate
-  document.getElementById('req-monetary-amount').value = hourlyRate;
+  document.getElementById('req-monetary-amount').value = hourlyRate || 0.0;
   toggleExchangeModeFields();
 }
 
@@ -1104,3 +1205,4 @@ function showToast(message, type = 'success') {
     setTimeout(() => { toast.style.display = 'none'; }, 300);
   }, 3200);
 }
+

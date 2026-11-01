@@ -43,6 +43,8 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         company=user_in.company,
         job_title=user_in.job_title,
         is_confidential=user_in.is_confidential,
+        is_confidential_teacher=user_in.is_confidential_teacher or user_in.is_confidential,
+        is_confidential_learner=user_in.is_confidential_learner or user_in.is_confidential,
         is_company_verified=bool(user_in.company and user_in.company.strip())
     )
     db.add(db_user)
@@ -55,7 +57,9 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         token_type="bearer",
         user_id=db_user.id,
         display_name=db_user.display_name,
-        is_confidential=db_user.is_confidential
+        is_confidential=db_user.is_confidential,
+        is_confidential_teacher=db_user.is_confidential_teacher,
+        is_confidential_learner=db_user.is_confidential_learner
     )
 
 @router.post("/login", response_model=Token)
@@ -77,7 +81,9 @@ def login_user(login_data: UserLogin, db: Session = Depends(get_db)):
         token_type="bearer",
         user_id=user.id,
         display_name=user.display_name,
-        is_confidential=user.is_confidential
+        is_confidential=user.is_confidential,
+        is_confidential_teacher=getattr(user, "is_confidential_teacher", False),
+        is_confidential_learner=getattr(user, "is_confidential_learner", False)
     )
 
 @router.post("/token", response_model=Token, include_in_schema=False)
@@ -99,7 +105,9 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         token_type="bearer",
         user_id=user.id,
         display_name=user.display_name,
-        is_confidential=user.is_confidential
+        is_confidential=user.is_confidential,
+        is_confidential_teacher=getattr(user, "is_confidential_teacher", False),
+        is_confidential_learner=getattr(user, "is_confidential_learner", False)
     )
 
 @router.get("/me", response_model=UserMe)
@@ -140,3 +148,4 @@ def update_my_profile(
     db.commit()
     db.refresh(current_user)
     return current_user
+

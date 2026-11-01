@@ -17,10 +17,15 @@ class User(Base):
     job_title = Column(String(255), nullable=True)
     is_company_verified = Column(Boolean, default=False)
     
-    # CONFIDENTIALITY / ANONYMITY FEATURE:
-    # If True: only display_name and what they can teach / explain are visible publicly.
-    # Email, phone, full_name, company, and personal contact details are completely masked.
+    # CONFIDENTIALITY / ANONYMITY FEATURES:
+    # 1. Master confidentiality toggle
     is_confidential = Column(Boolean, default=False, nullable=False)
+    
+    # 2. Specific option for person creating profile to TEACH (confidential vs public)
+    is_confidential_teacher = Column(Boolean, default=False, nullable=False)
+    
+    # 3. Specific option for person who wants to get TAUGHT / LEARN (confidential vs public)
+    is_confidential_learner = Column(Boolean, default=False, nullable=False)
     
     avatar_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

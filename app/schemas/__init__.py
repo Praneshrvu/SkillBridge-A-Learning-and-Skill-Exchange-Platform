@@ -1,7 +1,7 @@
 from app.schemas.user import UserCreate, UserUpdate, UserLogin, UserPublic, UserMe, Token, TokenPayload
 from app.schemas.skill import (
     SkillCreate, SkillResponse, UserSkillCreate, UserSkillUpdate,
-    UserSkillResponse, TeacherCatalogItem
+    UserSkillResponse, TeacherCatalogItem, SkillCatalogItem
 )
 from app.schemas.exchange import (
     ExchangeCreate, ExchangeStatusUpdate, PaymentAction,

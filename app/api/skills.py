@@ -8,7 +8,7 @@ from app.models.skill import Skill, UserSkill
 from app.models.user import User
 from app.schemas.skill import (
     SkillCreate, SkillResponse, UserSkillCreate,
-    UserSkillResponse, UserSkillUpdate, TeacherCatalogItem
+    UserSkillResponse, UserSkillUpdate, TeacherCatalogItem, SkillCatalogItem
 )
 from app.api.deps import get_current_user
 
@@ -53,25 +53,28 @@ def create_master_skill(
     db.refresh(skill)
     return skill
 
-@router.get("/catalog", response_model=List[TeacherCatalogItem])
+@router.get("/catalog", response_model=List[SkillCatalogItem])
 def browse_teacher_catalog(
+    skill_type: Optional[str] = Query("TEACH", description="'TEACH' to browse teachers/mentors, 'LEARN' to browse learners looking to be taught"),
     skill_id: Optional[int] = Query(None, description="Filter by specific skill"),
     skill_name: Optional[str] = Query(None, description="Filter by skill name keyword"),
     exchange_mode: Optional[str] = Query(None, description="'BARTER_ONLY', 'PAID_ONLY', 'BOTH', 'VOLUNTEER_FREE'"),
-    max_price: Optional[float] = Query(None, description="Maximum hourly fee demanded"),
-    confidential_only: Optional[bool] = Query(None, description="Filter for anonymous mentors"),
+    max_price: Optional[float] = Query(None, description="Maximum hourly fee demanded (for teachers)"),
+    confidential_only: Optional[bool] = Query(None, description="Filter for anonymous/confidential profiles"),
     db: Session = Depends(get_db)
 ):
     """
-    Browse teachers, mentors, and peers willing to teach.
-    Shows what they can teach, how good they are at explaining, their rates, and exchange preference.
-    Respects user confidentiality: confidential users show alias/display name only.
+    Browse teachers (people offering to teach) OR learners (people looking to be taught).
+    Both teachers and learners can choose to keep their profile confidential or public:
+    - If confidential: only their display name, skills, and explanation style / learning goals are visible.
+    - If public: their full name, company, and background are visible.
     """
+    target_type = skill_type.upper() if skill_type else "TEACH"
     query = (
         db.query(UserSkill, User, Skill)
         .join(User, UserSkill.user_id == User.id)
         .join(Skill, UserSkill.skill_id == Skill.id)
-        .filter(UserSkill.skill_type == "TEACH")
+        .filter(UserSkill.skill_type == target_type)
     )
 
     if skill_id:
@@ -85,27 +88,45 @@ def browse_teacher_catalog(
                 UserSkill.exchange_preference == "BOTH"
             )
         )
-    if max_price is not None:
+    if max_price is not None and target_type == "TEACH":
         query = query.filter(UserSkill.hourly_rate <= max_price)
-    if confidential_only is not None:
-        query = query.filter(User.is_confidential == confidential_only)
 
     results = query.all()
-    catalog: List[TeacherCatalogItem] = []
+    catalog: List[SkillCatalogItem] = []
 
     for user_skill, user, skill in results:
-        company_display = None if user.is_confidential else user.company
+        # Determine confidentiality:
+        # If user marked this specific skill listing as confidential, OR
+        # user has overall is_confidential, OR
+        # user has is_confidential_teacher (when teaching) or is_confidential_learner (when learning)
+        is_conf = bool(user_skill.is_confidential or user.is_confidential)
+        if target_type == "TEACH" and getattr(user, "is_confidential_teacher", False):
+            is_conf = True
+        elif target_type == "LEARN" and getattr(user, "is_confidential_learner", False):
+            is_conf = True
+
+        if confidential_only is not None and is_conf != confidential_only:
+            continue
+
+        company_display = None if is_conf else user.company
+        full_name_display = None if is_conf else user.full_name
+        bio_display = None if is_conf else user.bio
+
         catalog.append(
-            TeacherCatalogItem(
+            SkillCatalogItem(
                 user_skill_id=user_skill.id,
                 user_id=user.id,
+                skill_type=user_skill.skill_type,
                 display_name=user.display_name,
-                is_confidential=user.is_confidential,
+                is_confidential=is_conf,
+                full_name=full_name_display,
                 company=company_display,
+                bio=bio_display,
                 skill_name=skill.name,
                 category=skill.category,
                 proficiency_level=user_skill.proficiency_level,
                 explanation_style=user_skill.explanation_style,
+                learning_goal=getattr(user_skill, "learning_goal", None),
                 years_of_experience=user_skill.years_of_experience,
                 exchange_preference=user_skill.exchange_preference,
                 hourly_rate=user_skill.hourly_rate,
@@ -158,8 +179,10 @@ def add_my_skill(
         user_id=current_user.id,
         skill_id=skill_in.skill_id,
         skill_type=skill_in.skill_type.upper(),
+        is_confidential=skill_in.is_confidential,
         proficiency_level=skill_in.proficiency_level,
         explanation_style=skill_in.explanation_style,
+        learning_goal=skill_in.learning_goal,
         years_of_experience=skill_in.years_of_experience,
         exchange_preference=skill_in.exchange_preference,
         hourly_rate=skill_in.hourly_rate,
@@ -264,3 +287,4 @@ def find_barter_matches(
             })
 
     return {"count": len(matches), "matches": matches}
+

@@ -22,7 +22,7 @@ def test_confidential_profile_masking():
     alice_token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {alice_token}"}
 
-    # Fetch User 3 (David Vance / StealthArchitect_99 who has is_confidential = True)
+    # 1. Fetch User 3 (David Vance / StealthArchitect_99 who has is_confidential = True as Teacher)
     res = client.get("/api/users/3", headers=headers)
     assert res.status_code == 200
     data = res.json()
@@ -33,6 +33,20 @@ def test_confidential_profile_masking():
     assert data["company"] is None
     assert "Confidential" in data["bio"]
 
+    # 2. Test Learner Confidentiality in Catalog (skill_type=LEARN)
+    # Maya Lin (User 6) has is_confidential_learner = True
+    res_learners = client.get("/api/skills/catalog?skill_type=LEARN")
+    assert res_learners.status_code == 200
+    learners = res_learners.json()
+    maya_listing = next((l for l in learners if l["display_name"] == "StealthLearner_Maya"), None)
+    assert maya_listing is not None
+    assert maya_listing["is_confidential"] is True
+    # Real personal details must be masked for the learner!
+    assert maya_listing["full_name"] is None
+    assert maya_listing["company"] is None
+    assert maya_listing["skill_name"] == "System Design & Architecture"
+    assert "distributed rate-limiting" in maya_listing["learning_goal"]
+
 def test_master_skills_and_catalog():
     # Master skills
     res = client.get("/api/skills")
@@ -40,11 +54,17 @@ def test_master_skills_and_catalog():
     skills = res.json()
     assert len(skills) >= 5
 
-    # Teacher catalog
-    res_cat = client.get("/api/skills/catalog")
+    # Teacher catalog (skill_type=TEACH)
+    res_cat = client.get("/api/skills/catalog?skill_type=TEACH")
     assert res_cat.status_code == 200
     catalog = res_cat.json()
     assert len(catalog) >= 3
+
+    # Learner catalog (skill_type=LEARN)
+    res_learn = client.get("/api/skills/catalog?skill_type=LEARN")
+    assert res_learn.status_code == 200
+    learn_catalog = res_learn.json()
+    assert len(learn_catalog) >= 2
 
 def test_smart_barter_matcher():
     # Alice knows C++ and wants Java. Bob knows Java and wants C++.
@@ -145,3 +165,4 @@ def test_company_mentors_and_direct_qa():
     )
     assert ans_res.status_code == 200
     assert ans_res.json()["status"] == "ANSWERED"
+

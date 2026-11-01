@@ -155,3 +155,4 @@ def vote_on_question(
         upvotes_count=q.upvotes_count,
         user_voted=user_voted
     )
+

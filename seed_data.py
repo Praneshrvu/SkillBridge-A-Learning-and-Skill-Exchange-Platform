@@ -81,6 +81,8 @@ def seed_database():
             company="Confidential Tech Inc",
             job_title="Principal Architect",
             is_confidential=True, # Identity hidden!
+            is_confidential_teacher=True,
+            is_confidential_learner=True,
             is_company_verified=True
         )
 
@@ -95,6 +97,8 @@ def seed_database():
             company="Google",
             job_title="Staff Software Engineer",
             is_confidential=False,
+            is_confidential_teacher=False,
+            is_confidential_learner=False,
             is_company_verified=True
         )
 
@@ -109,10 +113,28 @@ def seed_database():
             company="Amazon",
             job_title="Senior Solutions Architect",
             is_confidential=False,
+            is_confidential_teacher=False,
+            is_confidential_learner=False,
             is_company_verified=True
         )
 
-        db.add_all([alice, bob, confidential_user, sarah, rahul])
+        # 6. Maya Lin - Confidential Learner (wants to be taught with identity protected)
+        maya = User(
+            email="maya.learner@skillbridge.dev",
+            full_name="Maya Lin",
+            display_name="StealthLearner_Maya",
+            hashed_password=get_password_hash("pass123"),
+            phone="+1-555-0188",
+            bio="Junior Engineer preparing for Senior System Design rounds.",
+            company="TechCorp Startup",
+            job_title="Associate Software Engineer",
+            is_confidential=False, # General profile visible
+            is_confidential_teacher=False,
+            is_confidential_learner=True, # LEARNER IDENTITY CONFIDENTIAL!
+            is_company_verified=True
+        )
+
+        db.add_all([alice, bob, confidential_user, sarah, rahul, maya])
         db.flush()
 
         print("Seeding User Skills (Teaching & Learning)...")
@@ -121,6 +143,7 @@ def seed_database():
             user_id=alice.id,
             skill_id=skill_map["C++ Programming"].id,
             skill_type="TEACH",
+            is_confidential=False, # Public teacher
             proficiency_level="EXPERT",
             explanation_style="Explains with memory diagrams, stack vs heap allocation, pointer visualization, and hands-on coding.",
             years_of_experience=4.5,
@@ -132,7 +155,9 @@ def seed_database():
             user_id=alice.id,
             skill_id=skill_map["Java Core & Spring Boot"].id,
             skill_type="LEARN",
+            is_confidential=False, # Public learner
             proficiency_level="BEGINNER",
+            learning_goal="Wants to learn Spring Boot microservices, REST annotations, and multithreading.",
             exchange_preference="BARTER_ONLY"
         ))
 
@@ -141,6 +166,7 @@ def seed_database():
             user_id=bob.id,
             skill_id=skill_map["Java Core & Spring Boot"].id,
             skill_type="TEACH",
+            is_confidential=False,
             proficiency_level="ADVANCED",
             explanation_style="Focuses on object-oriented architecture, Spring Boot annotations, dependency injection, and clean coding practices.",
             years_of_experience=4.0,
@@ -152,8 +178,21 @@ def seed_database():
             user_id=bob.id,
             skill_id=skill_map["C++ Programming"].id,
             skill_type="LEARN",
+            is_confidential=False,
             proficiency_level="BEGINNER",
+            learning_goal="Wants to understand low-level memory pointers, cache locality, and game engine math.",
             exchange_preference="BARTER_ONLY"
+        ))
+
+        # Maya Lin wants to be taught System Design, keeping her learner identity confidential!
+        db.add(UserSkill(
+            user_id=maya.id,
+            skill_id=skill_map["System Design & Architecture"].id,
+            skill_type="LEARN",
+            is_confidential=True, # Confidential learner!
+            proficiency_level="INTERMEDIATE",
+            learning_goal="Needs guidance on distributed rate-limiting, Redis caching topologies, and CAP theorem trade-offs.",
+            exchange_preference="BOTH"
         ))
 
         # Confidential User teaches Python & FastAPI (Paid mentorship)
@@ -161,6 +200,7 @@ def seed_database():
             user_id=confidential_user.id,
             skill_id=skill_map["Python & FastAPI"].id,
             skill_type="TEACH",
+            is_confidential=True, # Confidential teacher!
             proficiency_level="EXPERT",
             explanation_style="Step-by-step breakdown of asynchronous event loops, Pydantic schemas, and JWT security pipelines.",
             years_of_experience=8.0,
@@ -407,3 +447,4 @@ def seed_database():
 
 if __name__ == "__main__":
     seed_database()
+

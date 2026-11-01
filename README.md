@@ -214,3 +214,4 @@ Major-Project/
 
 ## 📜 License & Academic Integrity
 Developed as an enterprise-grade Major Project demonstrating peer-to-peer distributed learning, secure RESTful web service architecture, and privacy-preserving data models.
+

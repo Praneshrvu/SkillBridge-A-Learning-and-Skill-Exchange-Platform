@@ -11,6 +11,8 @@ class UserBase(BaseModel):
     company: Optional[str] = None
     job_title: Optional[str] = None
     is_confidential: bool = False
+    is_confidential_teacher: bool = False
+    is_confidential_learner: bool = False
     avatar_url: Optional[str] = None
 
 class UserCreate(BaseModel):
@@ -23,6 +25,8 @@ class UserCreate(BaseModel):
     company: Optional[str] = None
     job_title: Optional[str] = None
     is_confidential: bool = False
+    is_confidential_teacher: bool = False
+    is_confidential_learner: bool = False
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -32,6 +36,8 @@ class UserUpdate(BaseModel):
     company: Optional[str] = None
     job_title: Optional[str] = None
     is_confidential: Optional[bool] = None
+    is_confidential_teacher: Optional[bool] = None
+    is_confidential_learner: Optional[bool] = None
     avatar_url: Optional[str] = None
 
 class UserLogin(BaseModel):
@@ -44,6 +50,8 @@ class Token(BaseModel):
     user_id: int
     display_name: str
     is_confidential: bool
+    is_confidential_teacher: bool = False
+    is_confidential_learner: bool = False
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
@@ -53,8 +61,10 @@ class UserPublic(BaseModel):
     id: int
     display_name: str
     is_confidential: bool
+    is_confidential_teacher: bool = False
+    is_confidential_learner: bool = False
     
-    # Sensitive fields are None or masked if is_confidential is True
+    # Sensitive fields are None or masked if confidential
     full_name: Optional[str] = None
     bio: Optional[str] = None
     company: Optional[str] = None
@@ -64,19 +74,32 @@ class UserPublic(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_orm_with_privacy(cls, user_obj):
+    def from_orm_with_privacy(cls, user_obj, role: str = "general"):
         """
-        Enforces user confidentiality:
-        If user_obj.is_confidential is True, hides full_name, email, phone, company, and bio.
-        Only display_name and what they can teach remain public!
+        Enforces user confidentiality for both Teachers and Learners:
+        - role='teacher': user requested confidentiality as teacher (or master confidential)
+        - role='learner': user requested confidentiality as learner (or master confidential)
+        - role='general': checks master is_confidential
+        If confidential, masks full_name, email, phone, company, and bio.
+        Only display_name and what they can teach / want to learn remain public!
         """
-        if user_obj.is_confidential:
+        is_conf = False
+        if role == "teacher":
+            is_conf = bool(user_obj.is_confidential or getattr(user_obj, "is_confidential_teacher", False))
+        elif role == "learner":
+            is_conf = bool(user_obj.is_confidential or getattr(user_obj, "is_confidential_learner", False))
+        else:
+            is_conf = bool(user_obj.is_confidential)
+
+        if is_conf:
             return cls(
                 id=user_obj.id,
                 display_name=user_obj.display_name,
                 is_confidential=True,
+                is_confidential_teacher=getattr(user_obj, "is_confidential_teacher", False),
+                is_confidential_learner=getattr(user_obj, "is_confidential_learner", False),
                 full_name=None, # Hidden
-                bio="[Confidential Mentor Profile - Details hidden by user choice]",
+                bio=f"[Confidential {role.capitalize() if role != 'general' else 'User'} Profile - Personal identity protected by user choice]",
                 company=None, # Hidden
                 job_title=None, # Hidden
                 avatar_url=None,
@@ -87,6 +110,8 @@ class UserPublic(BaseModel):
             id=user_obj.id,
             display_name=user_obj.display_name,
             is_confidential=False,
+            is_confidential_teacher=getattr(user_obj, "is_confidential_teacher", False),
+            is_confidential_learner=getattr(user_obj, "is_confidential_learner", False),
             full_name=user_obj.full_name,
             bio=user_obj.bio,
             company=user_obj.company,

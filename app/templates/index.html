@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkillBridge | Peer-to-Peer Skill Sharing & Mentorship Platform</title>
+  <title>SkillBridge | Skill Sharing & Mentorship Platform</title>
   <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌉</text></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌉</text></svg>">
 </head>
+
 <body>
 
   <!-- Top Application Header -->
@@ -27,7 +30,8 @@
           <select class="persona-switcher" onchange="switchDemoPersona(this.value)">
             <option value="alice">Alice (Knows C++, Wants Java - Barter)</option>
             <option value="bob">Bob (Knows Java, Wants C++ - Barter)</option>
-            <option value="confidential">Stealth Mentor (Confidential Profile - Paid)</option>
+            <option value="confidential">Stealth Mentor (Confidential Teacher - Paid)</option>
+            <option value="maya">Maya Lin (Confidential Learner - Wants System Design)</option>
             <option value="sarah">Sarah (Google Staff Eng - Free AMA)</option>
             <option value="rahul">Rahul (Amazon AWS Arch - Paid Mentorship)</option>
           </select>
@@ -77,14 +81,26 @@
     <section id="tab-catalog" class="tab-pane active">
       <div class="page-intro">
         <div>
-          <h2>Explore Teachers & Skill Offerings</h2>
-          <p>Find peers and mentors who can teach what you need. Learn via skill barter (free mutual exchange) or paid tutoring.</p>
+          <h2>Explore Teachers & Learners Catalog</h2>
+          <p>Find peers and mentors who can teach what you need, or find learners seeking your knowledge. Learn via
+            skill barter (free mutual exchange) or paid tutoring.</p>
         </div>
       </div>
 
+      <!-- Toggle between Teachers (Offering to Teach) and Learners (Wanting to be Taught) -->
+      <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <button id="btn-view-teachers" class="btn btn-primary" onclick="setCatalogType('TEACH')">
+          👨‍🏫 Browse Teachers (People Offering to Teach)
+        </button>
+        <button id="btn-view-learners" class="btn btn-outline" onclick="setCatalogType('LEARN')">
+          🎓 Browse Learners (People Looking to be Taught)
+        </button>
+      </div>
+
       <div class="filter-bar">
-        <input type="text" id="catalog-search" class="search-input" placeholder="Search by skill name (e.g. C++, Java, Python)..." oninput="loadTeacherCatalog()">
-        
+        <input type="text" id="catalog-search" class="search-input"
+          placeholder="Search by skill name (e.g. C++, Java, Python)..." oninput="loadTeacherCatalog()">
+
         <select id="filter-skill-select" class="select-input" onchange="loadTeacherCatalog()">
           <option value="">All Skills</option>
         </select>
@@ -116,7 +132,9 @@
         <h2 style="font-size: 1.5rem; margin-bottom: 0.4rem;">Smart Peer-to-Peer Barter Algorithm</h2>
         <p style="font-size: 0.95rem; opacity: 0.95;">
           SkillBridge automatically pairs you with community members where a perfect mutual learning exchange exists!
-          For example, if you know <strong>C++</strong> and want to learn <strong>Java</strong>, and another person knows <strong>Java</strong> and wants to learn <strong>C++</strong>, you can exchange your knowledge completely free of charge.
+          For example, if you know <strong>C++</strong> and want to learn <strong>Java</strong>, and another person
+          knows <strong>Java</strong> and wants to learn <strong>C++</strong>, you can exchange your knowledge
+          completely free of charge.
         </p>
       </div>
 
@@ -130,7 +148,8 @@
       <div class="page-intro">
         <div>
           <h2>Company Interview & Corporate Training Question Bank</h2>
-          <p>Explore real questions asked during recruitment drives and training assessments at Google, Amazon, Microsoft, TCS, Infosys, and more.</p>
+          <p>Explore real questions asked during recruitment drives and training assessments at Google, Amazon,
+            Microsoft, TCS, Infosys, and more.</p>
         </div>
         <button class="btn btn-primary" onclick="openContributeQuestionModal()">
           ➕ Contribute Question
@@ -138,8 +157,9 @@
       </div>
 
       <div class="filter-bar">
-        <input type="text" id="question-search" class="search-input" placeholder="Search keywords, topics, or tags..." oninput="loadQuestionBank()">
-        
+        <input type="text" id="question-search" class="search-input" placeholder="Search keywords, topics, or tags..."
+          oninput="loadQuestionBank()">
+
         <select id="filter-company-select" class="select-input" onchange="loadQuestionBank()">
           <option value="">All Companies</option>
           <option value="Google">Google</option>
@@ -169,7 +189,8 @@
       <div class="page-intro">
         <div>
           <h2>Connect Directly with Company Professionals</h2>
-          <p>Verified software engineers and architects from major tech firms available for 1-on-1 direct Q&A, mock interviews, and career coaching.</p>
+          <p>Verified software engineers and architects from major tech firms available for 1-on-1 direct Q&A, mock
+            interviews, and career coaching.</p>
         </div>
       </div>
 
@@ -208,7 +229,8 @@
       <div class="page-intro">
         <div>
           <h2>Profile & Confidentiality Settings</h2>
-          <p>Manage your public identity, toggle anonymous mode, and maintain the list of skills you teach or want to learn.</p>
+          <p>Manage your public identity, toggle anonymous mode, and maintain the list of skills you teach or want to
+            learn.</p>
         </div>
       </div>
 
@@ -216,18 +238,53 @@
         <!-- Privacy & Profile Card -->
         <div class="card">
           <div class="card-body">
-            <h3 style="margin-bottom: 0.75rem;">Identity & Confidentiality Mode</h3>
-            
+            <h3 style="margin-bottom: 0.75rem;">Identity & Role Confidentiality Options</h3>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+              Decide whether you want to reveal your real identity or remain anonymous when offering to teach, and
+              similarly when seeking to be taught.
+            </p>
+
             <div id="privacy-preview-box" style="margin-bottom: 1.25rem;">
               <!-- Dynamic preview -->
             </div>
 
-            <div class="form-group" style="display: flex; align-items: center; gap: 0.75rem; background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <input type="checkbox" id="prof-confidential-toggle" style="width: 20px; height: 20px; cursor: pointer;" onchange="updatePrivacyPreview(this.checked)">
+            <!-- Option 1: Master Confidentiality -->
+            <div class="form-group"
+              style="display: flex; align-items: flex-start; gap: 0.75rem; background: #f8fafc; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
+              <input type="checkbox" id="prof-confidential-toggle"
+                style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;" onchange="updatePrivacyPreview()">
               <label for="prof-confidential-toggle" style="margin: 0; cursor: pointer;">
-                <strong>Keep Identity Confidential / Anonymous</strong>
+                <strong>Master Anonymous Mode (All Roles)</strong>
                 <span style="display: block; font-size: 0.75rem; color: #64748b; font-weight: normal;">
-                  When enabled, only your display name and what you can teach / explain will be visible to other users.
+                  Keep identity 100% confidential everywhere on SkillBridge.
+                </span>
+              </label>
+            </div>
+
+            <!-- Option 2: Teacher Specific Confidentiality -->
+            <div class="form-group"
+              style="display: flex; align-items: flex-start; gap: 0.75rem; background: #fefce8; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #fef08a; margin-bottom: 0.5rem;">
+              <input type="checkbox" id="prof-conf-teacher-toggle"
+                style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;" onchange="updatePrivacyPreview()">
+              <label for="prof-conf-teacher-toggle" style="margin: 0; cursor: pointer;">
+                <strong>👨‍🏫 Teacher Confidentiality Option</strong>
+                <span style="display: block; font-size: 0.75rem; color: #854d0e; font-weight: normal;">
+                  When offering to teach, hide real name, company, and bio. Show ONLY your alias and what you can teach
+                  / explain.
+                </span>
+              </label>
+            </div>
+
+            <!-- Option 3: Learner Specific Confidentiality -->
+            <div class="form-group"
+              style="display: flex; align-items: flex-start; gap: 0.75rem; background: #eff6ff; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 1rem;">
+              <input type="checkbox" id="prof-conf-learner-toggle"
+                style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;" onchange="updatePrivacyPreview()">
+              <label for="prof-conf-learner-toggle" style="margin: 0; cursor: pointer;">
+                <strong>🎓 Learner Confidentiality Option (Wanna Get Taught)</strong>
+                <span style="display: block; font-size: 0.75rem; color: #1e40af; font-weight: normal;">
+                  When seeking to be taught, hide real name and personal info. Show ONLY your alias and what you want to
+                  learn.
                 </span>
               </label>
             </div>
@@ -279,7 +336,8 @@
           <div class="card-body">
             <h3 style="margin-bottom: 0.75rem;">My Skills (Teaching & Learning)</h3>
             <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
-              List what you can teach (along with what you are good at explaining) and what you want to learn to enable automatic barter matching.
+              List what you can teach (along with what you are good at explaining) and what you want to learn to enable
+              automatic barter matching.
             </p>
 
             <div id="my-skills-list" style="margin-bottom: 1.25rem;">
@@ -288,7 +346,7 @@
 
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
               <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.75rem;">➕ Add Skill to Profile</h4>
-              
+
               <div class="form-group">
                 <label>Select Master Skill:</label>
                 <select id="profile-skill-select" class="select-input" style="width: 100%;">
@@ -298,14 +356,15 @@
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                 <div class="form-group">
-                  <label>Type:</label>
-                  <select id="profile-skill-type" class="select-input" style="width: 100%;">
-                    <option value="TEACH">I can TEACH this</option>
-                    <option value="LEARN">I want to LEARN this</option>
+                  <label>Role:</label>
+                  <select id="profile-skill-type" class="select-input" style="width: 100%;"
+                    onchange="toggleSkillTypeInputs()">
+                    <option value="TEACH">👨‍🏫 I want to TEACH this</option>
+                    <option value="LEARN">🎓 I want to get TAUGHT this (Learner)</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>Proficiency:</label>
+                  <label>Proficiency Level:</label>
                   <select id="profile-skill-prof" class="select-input" style="width: 100%;">
                     <option value="BEGINNER">Beginner</option>
                     <option value="INTERMEDIATE">Intermediate</option>
@@ -315,9 +374,31 @@
                 </div>
               </div>
 
-              <div class="form-group">
+              <!-- For Teachers: What are you good at explaining -->
+              <div class="form-group" id="teach-style-group">
                 <label>What are you good at explaining? (Teaching Style):</label>
-                <input type="text" id="profile-skill-style" placeholder="e.g. Explains pointer memory, live debugging, visual analogies...">
+                <input type="text" id="profile-skill-style"
+                  placeholder="e.g. Explains pointer memory, live debugging, visual analogies...">
+              </div>
+
+              <!-- For Learners: What do you want explained / goals -->
+              <div class="form-group" id="learn-goal-group" style="display: none;">
+                <label>What do you want explained? (Learning Goal / Objective):</label>
+                <input type="text" id="profile-skill-goal"
+                  placeholder="e.g. Need help with multithreading, system design interview prep...">
+              </div>
+
+              <!-- Confidentiality Option for this specific skill listing -->
+              <div class="form-group"
+                style="display: flex; align-items: flex-start; gap: 0.5rem; background: #fff; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                <input type="checkbox" id="profile-skill-confidential"
+                  style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer;">
+                <label for="profile-skill-confidential" style="margin: 0; font-size: 0.85rem; cursor: pointer;">
+                  <strong>🔒 Keep Identity Confidential for this listing</strong>
+                  <span style="display: block; font-size: 0.75rem; color: #64748b;">
+                    Only your alias and this skill will be visible. Your name and personal details will be hidden.
+                  </span>
+                </label>
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -365,7 +446,8 @@
 
         <div class="form-group">
           <label>Exchange Mode:</label>
-          <select id="req-exchange-type" class="select-input" style="width: 100%;" onchange="toggleExchangeModeFields()">
+          <select id="req-exchange-type" class="select-input" style="width: 100%;"
+            onchange="toggleExchangeModeFields()">
             <option value="BARTER">Skill-for-Skill Barter ($0 Swap)</option>
             <option value="PAID_ONE_WAY">Paid Tutoring (You pay teacher demanded fee)</option>
             <option value="FREE">Free Community Mentorship</option>
@@ -388,7 +470,8 @@
 
         <div class="form-group">
           <label>Learning Objectives & Schedule Notes:</label>
-          <textarea id="req-session-details" placeholder="Introduce yourself, what concepts you want to cover, and your availability..."></textarea>
+          <textarea id="req-session-details"
+            placeholder="Introduce yourself, what concepts you want to cover, and your availability..."></textarea>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
@@ -408,8 +491,9 @@
       </div>
       <div>
         <input type="hidden" id="ask-mentor-id">
-        
-        <div style="background: #eef2ff; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; color: #3730a3; font-size: 0.9rem;">
+
+        <div
+          style="background: #eef2ff; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; color: #3730a3; font-size: 0.9rem;">
           Direct question addressed to: <strong id="ask-mentor-target"></strong>
         </div>
 
@@ -420,7 +504,8 @@
 
         <div class="form-group">
           <label>Detailed Question & Context:</label>
-          <textarea id="ask-q-text" placeholder="Explain your background, specific problem, or question in detail..."></textarea>
+          <textarea id="ask-q-text"
+            placeholder="Explain your background, specific problem, or question in detail..."></textarea>
         </div>
 
         <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
@@ -484,7 +569,8 @@
 
         <div class="form-group">
           <label>Comprehensive Solution & Explanation:</label>
-          <textarea id="add-q-ans" style="min-height: 120px;" placeholder="Provide code snippet, algorithmic approach, or conceptual explanation..."></textarea>
+          <textarea id="add-q-ans" style="min-height: 120px;"
+            placeholder="Provide code snippet, algorithmic approach, or conceptual explanation..."></textarea>
         </div>
 
         <div class="form-group">
@@ -523,7 +609,8 @@
 
         <div class="form-group">
           <label>Feedback & Explanation Quality:</label>
-          <textarea id="review-comment" placeholder="How clearly did the teacher explain concepts? Did you find the exchange valuable?"></textarea>
+          <textarea id="review-comment"
+            placeholder="How clearly did the teacher explain concepts? Did you find the exchange valuable?"></textarea>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
@@ -536,7 +623,8 @@
 
   <!-- Footer -->
   <footer>
-    <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div
+      style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
       <div>
         <strong>SkillBridge</strong> • Major Project Platform • RESTful Web Services with Python FastAPI & MySQL
       </div>
@@ -548,4 +636,5 @@
 
   <script src="/static/js/app.js"></script>
 </body>
+
 </html>

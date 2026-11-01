@@ -86,3 +86,4 @@ def get_user_skills(
         query = query.filter(UserSkill.skill_type == skill_type.upper())
         
     return query.all()
+

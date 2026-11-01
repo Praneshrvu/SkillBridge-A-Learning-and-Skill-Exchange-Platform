@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -24,10 +24,18 @@ class UserSkill(Base):
     # TEACH (user offers to teach) or LEARN (user wants to learn)
     skill_type = Column(String(20), nullable=False, default="TEACH") # TEACH or LEARN
     
+    # Requirement: Option for person creating profile to teach OR person wanting to get taught
+    # to decide whether this specific skill profile is confidential or public!
+    is_confidential = Column(Boolean, default=False, nullable=False)
+    
     proficiency_level = Column(String(30), nullable=False, default="INTERMEDIATE") # BEGINNER, INTERMEDIATE, ADVANCED, EXPERT
     
     # Requirement: "what they can teach or is good at explaining be visible"
     explanation_style = Column(Text, nullable=True) # e.g. "Good at explaining from scratch with visual analogies and live code"
+    
+    # For people who want to be taught: what they specifically want to understand/learn
+    learning_goal = Column(Text, nullable=True) # e.g. "Wants to learn pointers, thread synchronization, or interview questions"
+    
     years_of_experience = Column(Float, default=0.0)
     
     # Exchange Preference:

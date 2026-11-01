@@ -202,3 +202,4 @@ def reply_to_direct_question(
     db.commit()
     db.refresh(q)
     return build_direct_question_response(q)
+
