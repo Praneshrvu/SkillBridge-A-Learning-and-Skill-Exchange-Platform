@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: skillbridge_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: skillbridge_db
+      MYSQL_USER: skillbridge_user
+      MYSQL_PASSWORD: skillbridge_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: skillbridge_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=SkillBridge - Peer-to-Peer Skill Sharing & Mentorship Platform
+      - DATABASE_URL=mysql+pymysql://skillbridge_user:skillbridge_pass@db:3306/skillbridge_db
+      - FALLBACK_TO_SQLITE=True
+      - SECRET_KEY=super-secret-production-key-skillbridge-2026
+    depends_on:
+      db:
+        condition: service_healthy
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: skillbridge_phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpassword
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:

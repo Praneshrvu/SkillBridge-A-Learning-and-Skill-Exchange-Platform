@@ -1,0 +1,655 @@
+{
+  "info": {
+    "_postman_id": "9b1287c4-skill-bridge-api-collection-2026",
+    "name": "SkillBridge API - Complete Postman Collection",
+    "description": "Comprehensive RESTful API testing collection for SkillBridge: Peer-to-Peer Skill Sharing & Mentorship Platform with Confidential Profiles, Barter Matching, Company Interview Question Banks, and Direct Company Professional Q&A.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & Confidentiality Settings",
+      "item": [
+        {
+          "name": "Register User (Public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new_student@skillbridge.dev\",\n  \"password\": \"pass123\",\n  \"full_name\": \"Carlos Santana\",\n  \"display_name\": \"Carlos_Code\",\n  \"phone\": \"+1-555-9988\",\n  \"bio\": \"Computer Science student eager to learn backend development\",\n  \"is_confidential\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register User (Confidential / Anonymous Mode)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"secret_expert@skillbridge.dev\",\n  \"password\": \"pass123\",\n  \"full_name\": \"Secret Professional\",\n  \"display_name\": \"StealthKernelDev\",\n  \"phone\": \"+1-555-0000\",\n  \"bio\": \"Senior developer who prefers anonymity\",\n  \"is_confidential\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login (Alice - C++ Master)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token', jsonData.access_token);",
+                  "    console.log('Token updated for Alice');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@skillbridge.dev\",\n  \"password\": \"pass123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Toggle Confidentiality Mode (Update Profile)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_confidential\": true,\n  \"display_name\": \"Alice_StealthCpp\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users & Confidential Profiles",
+      "item": [
+        {
+          "name": "List All Users (Confidentiality Enforced)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "List Confidential / Anonymous Users Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users?confidential_only=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                {
+                  "key": "confidential_only",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Profile (Public View with Privacy Masking)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "3"]
+            }
+          }
+        },
+        {
+          "name": "Get User Skills (What they Teach / Explain)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/1/skills?skill_type=TEACH",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "1", "skills"],
+              "query": [
+                {
+                  "key": "skill_type",
+                  "value": "TEACH"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Skills & Teaching Catalog",
+      "item": [
+        {
+          "name": "List Master Skills",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills"]
+            }
+          }
+        },
+        {
+          "name": "Browse Teacher Catalog (What They Teach & Explaining Style)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/skills/catalog",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills", "catalog"]
+            }
+          }
+        },
+        {
+          "name": "Filter Catalog for Free Barter Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/skills/catalog?exchange_mode=BARTER_ONLY",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills", "catalog"],
+              "query": [
+                {
+                  "key": "exchange_mode",
+                  "value": "BARTER_ONLY"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Catalog for Anonymous / Confidential Mentors",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/skills/catalog?confidential_only=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills", "catalog"],
+              "query": [
+                {
+                  "key": "confidential_only",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Smart 2-Way Barter Matcher (e.g. C++ for Java)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/skills/match",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills", "match"]
+            }
+          }
+        },
+        {
+          "name": "Add Skill to Teach (Demanding Fee & Explaining Style)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skill_id\": 4,\n  \"skill_type\": \"TEACH\",\n  \"proficiency_level\": \"EXPERT\",\n  \"explanation_style\": \"Microservice partitioning, distributed transactions, and visual architecture diagrams\",\n  \"years_of_experience\": 5.0,\n  \"exchange_preference\": \"BOTH\",\n  \"hourly_rate\": 20.0,\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/skills/my-skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills", "my-skills"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Skill Exchanges & Tutoring Sessions",
+      "item": [
+        {
+          "name": "Propose Skill Barter ($0 Swap: C++ for Java)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiver_id\": 2,\n  \"exchange_type\": \"BARTER\",\n  \"sender_offered_skill_id\": 1,\n  \"receiver_requested_skill_id\": 2,\n  \"monetary_amount\": 0.0,\n  \"session_details\": \"Mutual Barter: Alice teaches C++ memory architecture in exchange for Bob teaching Java Spring Boot.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges"]
+            }
+          }
+        },
+        {
+          "name": "Propose Paid Tutoring (Learner Agrees to Pay Demanded Fee)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiver_id\": 3,\n  \"exchange_type\": \"PAID_ONE_WAY\",\n  \"receiver_requested_skill_id\": 3,\n  \"monetary_amount\": 30.0,\n  \"session_details\": \"Tutoring session on async FastAPI event loops.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges"]
+            }
+          }
+        },
+        {
+          "name": "List My Exchanges (Sent & Received)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges"]
+            }
+          }
+        },
+        {
+          "name": "Deposit Money into Escrow for Paid Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"PAY_ESCROW\",\n  \"payment_method\": \"WALLET_ESCROW\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/2/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "2", "payment"]
+            }
+          }
+        },
+        {
+          "name": "Release Escrow Payment to Teacher Upon Completion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"RELEASE_TO_TEACHER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/2/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "2", "payment"]
+            }
+          }
+        },
+        {
+          "name": "Submit Session Review & Rating",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Outstanding mentor! Clear explanations with memory layout diagrams and code examples.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/exchanges/1/review",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "exchanges", "1", "review"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Company Interview & Training Question Bank",
+      "item": [
+        {
+          "name": "List Questions (Filter by Company e.g. Google)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/questions?company=Google",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "questions"],
+              "query": [
+                {
+                  "key": "company",
+                  "value": "Google"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Questions (Filter by TCS / Infosys Training)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/questions?company=TCS",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "questions"],
+              "query": [
+                {
+                  "key": "company",
+                  "value": "TCS"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Question Detail with In-Depth Solution",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/questions/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "questions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Upvote Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/questions/1/vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "questions", "1", "vote"]
+            }
+          }
+        },
+        {
+          "name": "Contribute New Company Interview Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"Meta\",\n  \"role\": \"Production Engineer\",\n  \"category\": \"Linux & Networking\",\n  \"round_type\": \"Systems Coding\",\n  \"difficulty\": \"Medium\",\n  \"question_text\": \"How does the TCP 3-way handshake work and what happens during SYN flood attacks?\",\n  \"answer_explanation\": \"SYN -> SYN-ACK -> ACK. During SYN flood, backlog queue is exhausted. Mitigate via SYN cookies and kernel backlog tuning.\",\n  \"tags\": \"networking, tcp, security, linux\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "questions"]
+            }
+          }
+        },
+        {
+          "name": "List Featured Companies in Question Bank",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/questions/companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "questions", "companies"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Company Mentors & Direct Professional Q&A",
+      "item": [
+        {
+          "name": "Browse Company Mentors (Google, Amazon, etc.)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/company-mentors",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "company-mentors"]
+            }
+          }
+        },
+        {
+          "name": "Filter for Free Mentorship AMA ($0 Fee)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/company-mentors?free_only=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "company-mentors"],
+              "query": [
+                {
+                  "key": "free_only",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ask Question Directly to Company Professional",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mentor_user_id\": 4,\n  \"title\": \"Advice for Google Cloud SDE coding interviews\",\n  \"question_text\": \"What areas of Concurrency and System Design are most critical for L4 Google interviews?\",\n  \"is_private\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/company-mentors/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "company-mentors", "ask"]
+            }
+          }
+        },
+        {
+          "name": "View Community Direct Q&A Threads",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/company-mentors/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "company-mentors", "questions"]
+            }
+          }
+        },
+        {
+          "name": "Mentor Answers Direct Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mentor_response\": \"Master thread synchronization, mutexes, condition variables, and understand distributed transactions and RPC protocols like gRPC.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/company-mentors/questions/1/reply",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "company-mentors", "questions", "1", "reply"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
