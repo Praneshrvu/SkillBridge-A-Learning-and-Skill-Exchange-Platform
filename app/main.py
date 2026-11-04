@@ -67,6 +67,7 @@ def index_page(request: Request):
     )
 
 @app.get("/health")
+@app.get("/healthz")
 def health_check():
     """Health check endpoint for Docker & monitoring."""
     return {"status": "ok", "app": settings.PROJECT_NAME, "version": settings.PROJECT_VERSION}
