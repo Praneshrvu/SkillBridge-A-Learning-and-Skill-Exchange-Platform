@@ -63,6 +63,10 @@ class SkillCatalogItem(BaseModel):
     display_name: str
     is_confidential: bool
     full_name: Optional[str] = None # Masked if is_confidential is True
+    phone: Optional[str] = None     # Shown only if teacher/user explicitly enables show_phone
+    email: Optional[str] = None     # Shown only if teacher/user explicitly enables show_email
+    show_phone: bool = False
+    show_email: bool = False
     company: Optional[str] = None   # Masked if is_confidential is True
     bio: Optional[str] = None       # Masked if is_confidential is True
     skill_name: str

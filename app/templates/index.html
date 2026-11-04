@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SkillBridge | Skill Sharing & Mentorship Platform</title>
+  <title>SkillBridge | Peer-to-Peer Skill Sharing & Confidential Mentorship</title>
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌉</text></svg>">
@@ -12,452 +12,1048 @@
 
 <body>
 
-  <!-- Top Application Header -->
-  <header>
-    <div class="header-container">
-      <div class="brand">
-        <div class="brand-icon">🌉</div>
-        <div class="brand-text">
-          <h1>SkillBridge</h1>
-          <span>Skill Sharing & Mentorship Platform</span>
-        </div>
-      </div>
-
-      <div class="user-nav-actions">
-        <!-- Persona Quick Switcher for Testing/Demos -->
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 0.8rem; color: #94a3b8;">Demo Switcher:</span>
-          <select class="persona-switcher" onchange="switchDemoPersona(this.value)">
-            <option value="alice">Alice (Knows C++, Wants Java - Barter)</option>
-            <option value="bob">Bob (Knows Java, Wants C++ - Barter)</option>
-            <option value="confidential">Stealth Mentor (Confidential Teacher - Paid)</option>
-            <option value="maya">Maya Lin (Confidential Learner - Wants System Design)</option>
-            <option value="sarah">Sarah (Google Staff Eng - Free AMA)</option>
-            <option value="rahul">Rahul (Amazon AWS Arch - Paid Mentorship)</option>
-          </select>
-        </div>
-
-        <div id="user-header-info" style="display: flex; align-items: center; gap: 0.75rem;">
-          <!-- Dynamically populated -->
-        </div>
-
-        <div style="display: flex; gap: 0.4rem;">
-          <a href="/docs" target="_blank" class="btn btn-secondary btn-sm" title="Interactive OpenAPI Swagger Specs">
-            ⚡ Swagger UI
-          </a>
-          <a href="/redoc" target="_blank" class="btn btn-secondary btn-sm" title="ReDoc Documentation">
-            📖 ReDoc
-          </a>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Navigation Tabs -->
-  <nav class="nav-tabs">
-    <button class="tab-btn active" data-target="tab-catalog">
-      🔍 Explore Teachers & Skills
-    </button>
-    <button class="tab-btn" data-target="tab-barter">
-      🤝 2-Way Barter Matcher
-    </button>
-    <button class="tab-btn" data-target="tab-questions">
-      📚 Company Interview Question Bank
-    </button>
-    <button class="tab-btn" data-target="tab-mentors">
-      🏢 Connect with Company Mentors
-    </button>
-    <button class="tab-btn" data-target="tab-exchanges">
-      📬 My Exchanges & Sessions
-    </button>
-    <button class="tab-btn" data-target="tab-profile">
-      ⚙️ My Profile & Privacy Control
-    </button>
-  </nav>
-
-  <!-- Main Workspace -->
-  <main>
-    <!-- TAB 1: TEACHER & SKILL CATALOG -->
-    <section id="tab-catalog" class="tab-pane active">
-      <div class="page-intro">
-        <div>
-          <h2>Explore Teachers & Learners Catalog</h2>
-          <p>Find peers and mentors who can teach what you need, or find learners seeking your knowledge. Learn via
-            skill barter (free mutual exchange) or paid tutoring.</p>
-        </div>
-      </div>
-
-      <!-- Toggle between Teachers (Offering to Teach) and Learners (Wanting to be Taught) -->
-      <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
-        <button id="btn-view-teachers" class="btn btn-primary" onclick="setCatalogType('TEACH')">
-          👨‍🏫 Browse Teachers (People Offering to Teach)
-        </button>
-        <button id="btn-view-learners" class="btn btn-outline" onclick="setCatalogType('LEARN')">
-          🎓 Browse Learners (People Looking to be Taught)
-        </button>
-      </div>
-
-      <div class="filter-bar">
-        <input type="text" id="catalog-search" class="search-input"
-          placeholder="Search by skill name (e.g. C++, Java, Python)..." oninput="loadTeacherCatalog()">
-
-        <select id="filter-skill-select" class="select-input" onchange="loadTeacherCatalog()">
-          <option value="">All Skills</option>
-        </select>
-
-        <select id="filter-mode-select" class="select-input" onchange="loadTeacherCatalog()">
-          <option value="">All Exchange Modes</option>
-          <option value="BARTER_ONLY">Skill Barter Only ($0)</option>
-          <option value="PAID_ONLY">Paid Mentorship</option>
-          <option value="VOLUNTEER_FREE">Free Volunteer</option>
-        </select>
-
-        <select id="filter-confidential-select" class="select-input" onchange="loadTeacherCatalog()">
-          <option value="">All Identities</option>
-          <option value="true">🔒 Anonymous / Confidential Only</option>
-          <option value="false">👁️ Public Profiles Only</option>
-        </select>
-
-        <button class="btn btn-secondary btn-sm" onclick="loadTeacherCatalog()">Refresh</button>
-      </div>
-
-      <div class="cards-grid" id="catalog-grid">
-        <!-- Rendered by app.js -->
-      </div>
-    </section>
-
-    <!-- TAB 2: SMART 2-WAY BARTER MATCHER -->
-    <section id="tab-barter" class="tab-pane">
-      <div class="match-hero">
-        <h2 style="font-size: 1.5rem; margin-bottom: 0.4rem;">Smart Peer-to-Peer Barter Algorithm</h2>
-        <p style="font-size: 0.95rem; opacity: 0.95;">
-          SkillBridge automatically pairs you with community members where a perfect mutual learning exchange exists!
-          For example, if you know <strong>C++</strong> and want to learn <strong>Java</strong>, and another person
-          knows <strong>Java</strong> and wants to learn <strong>C++</strong>, you can exchange your knowledge
-          completely free of charge.
+  <!-- ==================== 1. AUTHENTICATION & LOGIN GATE ==================== -->
+  <div id="auth-portal">
+    <div class="auth-container">
+      <div class="auth-header">
+        <div style="font-size: 3.5rem; margin-bottom: 0.5rem;">🌉</div>
+        <h1>Welcome to SkillBridge</h1>
+        <p>
+          Peer-to-Peer Skill Sharing, $0 Mutual Barter Matching, and Direct Mentorship with Verified Company
+          Professionals — with Total Confidentiality & Privacy Control.
         </p>
       </div>
 
-      <div id="barter-matches-container">
-        <!-- Rendered by app.js -->
-      </div>
-    </section>
-
-    <!-- TAB 3: COMPANY INTERVIEW & TRAINING QUESTION BANK -->
-    <section id="tab-questions" class="tab-pane">
-      <div class="page-intro">
-        <div>
-          <h2>Company Interview & Corporate Training Question Bank</h2>
-          <p>Explore real questions asked during recruitment drives and training assessments at Google, Amazon,
-            Microsoft, TCS, Infosys, and more.</p>
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button id="auth-tab-login-btn" class="auth-tab-btn active" onclick="switchAuthTab('login')">
+            🔑 Sign In
+          </button>
+          <button id="auth-tab-register-btn" class="auth-tab-btn" onclick="switchAuthTab('register')">
+            📝 Create New Account
+          </button>
         </div>
-        <button class="btn btn-primary" onclick="openContributeQuestionModal()">
-          ➕ Contribute Question
+
+        <div id="auth-error-alert"
+          style="display: none; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 0.65rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem;">
+        </div>
+
+        <!-- 1. LOGIN FORM -->
+        <form id="login-form" onsubmit="handleUserLogin(event)">
+          <div class="auth-form-group">
+            <label>Email Address:</label>
+            <input type="email" id="login-email" placeholder="e.g. alice@skillbridge.dev" required
+              autocomplete="username">
+          </div>
+          <div class="auth-form-group">
+            <label>Password:</label>
+            <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn-primary"
+            style="width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 0.5rem;" id="login-submit-btn">
+            Sign In & Access Platform 🚀
+          </button>
+        </form>
+
+        <!-- 2. REGISTRATION FORM (With Explicit Privacy / Confidentiality Options) -->
+        <form id="register-form" onsubmit="handleUserRegister(event)" style="display: none;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="auth-form-group">
+              <label>Full Real Name:</label>
+              <input type="text" id="reg-fullname" placeholder="e.g. Jane Doe" required>
+            </div>
+            <div class="auth-form-group">
+              <label>Public Alias / Display Name (Visible to all):</label>
+              <input type="text" id="reg-displayname" placeholder="e.g. Jane_CloudDev" required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="auth-form-group">
+              <label>Email Address:</label>
+              <input type="email" id="reg-email" placeholder="jane@example.com" required autocomplete="username">
+            </div>
+            <div class="auth-form-group">
+              <label>Password (Min 6 chars):</label>
+              <input type="password" id="reg-password" placeholder="••••••••" minlength="6" required
+                autocomplete="new-password">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="auth-form-group">
+              <label>Phone Number (Optional):</label>
+              <input type="text" id="reg-phone" placeholder="+1-555-0101">
+            </div>
+            <div class="auth-form-group">
+              <label>Company / Organization:</label>
+              <input type="text" id="reg-company" placeholder="e.g. TechCorp or Student">
+            </div>
+          </div>
+
+          <!-- Confidentiality & Privacy Preferences -->
+          <div
+            style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 0.85rem; margin: 1rem 0;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #a5b4fc; margin-bottom: 0.5rem;">
+              🔒 Confidentiality & Identity Privacy Choices:
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <label
+                style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.8rem; color: #cbd5e1; cursor: pointer;">
+                <input type="checkbox" id="reg-conf-master" style="margin-top: 2px;">
+                <span><strong>Master Anonymous Mode:</strong> Hide real name & company completely across the entire
+                  platform.</span>
+              </label>
+              <label
+                style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.8rem; color: #cbd5e1; cursor: pointer;">
+                <input type="checkbox" id="reg-conf-teacher" style="margin-top: 2px;">
+                <span><strong>👨‍🏫 Teacher Privacy:</strong> Hide my personal identity when I offer to teach.</span>
+              </label>
+              <label
+                style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.8rem; color: #cbd5e1; cursor: pointer;">
+                <input type="checkbox" id="reg-conf-learner" style="margin-top: 2px;">
+                <span><strong>🎓 Learner Privacy:</strong> Hide my personal identity when I want to be taught.</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 1rem;"
+            id="reg-submit-btn">
+            Create Account & Enter SkillBridge ✨
+          </button>
+        </form>
+
+        <!-- 3. OPTIONAL DEMO PERSONAS (Collapsible Accordion) -->
+        <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;"
+            onclick="toggleDemoPersonas()">
+            <div
+              style="font-weight: 700; font-size: 0.88rem; color: #cbd5e1; display: flex; align-items: center; gap: 0.4rem;">
+              <span>⚡ Quick Evaluation Personas (Optional)</span>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-personas"
+              style="font-size: 0.72rem; padding: 2px 8px; color: #a5b4fc; border-color: rgba(99, 102, 241, 0.4);">
+              👁️ Show / Hide Personas
+            </button>
+          </div>
+
+          <div id="demo-personas-container" style="display: block; margin-top: 0.75rem;">
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.75rem;">
+              Click any demo profile to test that persona immediately with pre-loaded skills & data:
+            </div>
+
+            <div class="demo-personas-grid">
+              <div class="demo-persona-card" onclick="quickLoginPersona('alice')">
+                <div class="chat-avatar" style="width: 34px; height: 34px; font-size: 0.85rem;">AC</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Alice Chen</div>
+                  <div style="font-size: 0.72rem; color: #a5b4fc;">Teaches C++ • Public Profile</div>
+                </div>
+              </div>
+
+              <div class="demo-persona-card" onclick="quickLoginPersona('bob')">
+                <div class="chat-avatar" style="width: 34px; height: 34px; font-size: 0.85rem;">BS</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Bob Smith</div>
+                  <div style="font-size: 0.72rem; color: #a5b4fc;">Teaches Java • Hides Contact Info</div>
+                </div>
+              </div>
+
+              <div class="demo-persona-card" onclick="quickLoginPersona('confidential')">
+                <div class="chat-avatar confidential" style="width: 34px; height: 34px; font-size: 0.85rem;">🔒</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Stealth Mentor</div>
+                  <div style="font-size: 0.72rem; color: #fbbf24;">100% Confidential Teacher</div>
+                </div>
+              </div>
+
+              <div class="demo-persona-card" onclick="quickLoginPersona('maya')">
+                <div class="chat-avatar confidential" style="width: 34px; height: 34px; font-size: 0.85rem;">🔒</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Maya Lin</div>
+                  <div style="font-size: 0.72rem; color: #60a5fa;">Confidential Learner (Getting Taught)</div>
+                </div>
+              </div>
+
+              <div class="demo-persona-card" onclick="quickLoginPersona('sarah')">
+                <div class="chat-avatar" style="width: 34px; height: 34px; font-size: 0.85rem;">SJ</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Sarah Jenkins</div>
+                  <div style="font-size: 0.72rem; color: #38bdf8;">Staff Engineer @ Google</div>
+                </div>
+              </div>
+
+              <div class="demo-persona-card" onclick="quickLoginPersona('rahul')">
+                <div class="chat-avatar" style="width: 34px; height: 34px; font-size: 0.85rem;">RS</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #fff;">Rahul Sharma</div>
+                  <div style="font-size: 0.72rem; color: #f59e0b;">Solutions Architect @ Amazon</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portal Footer Note -->
+        <div
+          style="margin-top: 1.5rem; text-align: center; font-size: 0.78rem; color: #64748b; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 1rem;">
+          🔒 Fully encrypted peer sessions • Zero-disclosure confidential mentorship • Safe platform escrow
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. MAIN APPLICATION DASHBOARD ==================== -->
+  <div id="app-dashboard" class="app-shell" style="display: none;">
+    <!-- Backdrop for mobile sidebar -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleSidebarMenu()"></div>
+
+    <!-- LEFT-HAND VERTICAL SIDEBAR -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <!-- Sidebar Brand Header (with Collapse Toggle) -->
+      <div class="sidebar-brand">
+        <div class="brand-icon">🌉</div>
+        <div class="brand-info">
+          <h2>SkillBridge</h2>
+          <span>A Learning Platform and Skill Exchange</span>
+        </div>
+        <button class="sidebar-collapse-btn" onclick="toggleSidebarMenu()" title="Collapse / Expand Sidebar"
+          style="margin-left: auto; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; color: #94a3b8; font-size: 0.8rem; cursor: pointer; padding: 4px 8px;">
+          ◀
         </button>
       </div>
 
-      <div class="filter-bar">
-        <input type="text" id="question-search" class="search-input" placeholder="Search keywords, topics, or tags..."
-          oninput="loadQuestionBank()">
+      <!-- Vertical Scrolling Navigation Options -->
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <div class="nav-group-title">EXPLORE & DISCOVER</div>
 
-        <select id="filter-company-select" class="select-input" onchange="loadQuestionBank()">
-          <option value="">All Companies</option>
-          <option value="Google">Google</option>
-          <option value="Amazon">Amazon</option>
-          <option value="Microsoft">Microsoft</option>
-          <option value="TCS">TCS</option>
-          <option value="Infosys">Infosys</option>
-        </select>
+        <button class="tab-btn sidebar-nav-item active" data-target="tab-catalog">
+          <span class="nav-item-icon">🔍</span>
+          <span class="nav-item-text">Explore Teachers & Skills</span>
+        </button>
 
-        <select id="filter-difficulty-select" class="select-input" onchange="loadQuestionBank()">
-          <option value="">All Difficulties</option>
-          <option value="Easy">Easy</option>
-          <option value="Medium">Medium</option>
-          <option value="Hard">Hard</option>
-        </select>
+        <button class="tab-btn sidebar-nav-item" data-target="tab-barter">
+          <span class="nav-item-icon">🤝</span>
+          <span class="nav-item-text">2-Way Barter Matcher</span>
+          <span class="nav-pill-badge">$0</span>
+        </button>
 
-        <button class="btn btn-secondary btn-sm" onclick="loadQuestionBank()">Filter</button>
-      </div>
+        <button class="tab-btn sidebar-nav-item" data-target="tab-questions">
+          <span class="nav-item-icon">📚</span>
+          <span class="nav-item-text">Interview Question Bank</span>
+        </button>
 
-      <div id="questions-list-container">
-        <!-- Rendered by app.js -->
-      </div>
-    </section>
+        <button class="tab-btn sidebar-nav-item" data-target="tab-mentors">
+          <span class="nav-item-icon">🏢</span>
+          <span class="nav-item-text">Company Mentors</span>
+        </button>
 
-    <!-- TAB 4: COMPANY MENTORS & DIRECT Q&A -->
-    <section id="tab-mentors" class="tab-pane">
-      <div class="page-intro">
-        <div>
-          <h2>Connect Directly with Company Professionals</h2>
-          <p>Verified software engineers and architects from major tech firms available for 1-on-1 direct Q&A, mock
-            interviews, and career coaching.</p>
+        <div class="nav-group-title" style="margin-top: 1.25rem;">MY WORKSPACE</div>
+
+        <button class="tab-btn sidebar-nav-item" data-target="tab-exchanges">
+          <span class="nav-item-icon">📬</span>
+          <span class="nav-item-text">My Exchanges & Sessions</span>
+        </button>
+
+        <button class="tab-btn sidebar-nav-item" data-target="tab-chat" id="nav-chat-btn">
+          <span class="nav-item-icon">💬</span>
+          <span class="nav-item-text">Community Lounge & Chat</span>
+          <span id="chat-unread-badge" class="chat-unread-count" style="display:none;">0</span>
+        </button>
+
+        <div class="nav-group-title" style="margin-top: 1.25rem;">SETTINGS & SUPPORT</div>
+
+        <button class="tab-btn sidebar-nav-item" data-target="tab-support">
+          <span class="nav-item-icon">🎧</span>
+          <span class="nav-item-text">Help & Customer Support</span>
+        </button>
+
+        <button class="tab-btn sidebar-nav-item" data-target="tab-profile">
+          <span class="nav-item-icon">⚙️</span>
+          <span class="nav-item-text">Profile & Privacy Control</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar User Profile & Sign Out Footer -->
+      <div class="sidebar-user-footer">
+        <div class="sidebar-user-info" id="sidebar-user-card">
+          <div class="chat-avatar" id="sidebar-user-avatar" style="width: 36px; height: 36px; font-size: 0.9rem;">U
+          </div>
+          <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+            <div id="sidebar-user-name"
+              style="font-weight: 700; font-size: 0.88rem; color: #fff; overflow: hidden; text-overflow: ellipsis;">
+              Member</div>
+            <div id="sidebar-user-email"
+              style="font-size: 0.72rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis;">
+              user@skillbridge.dev</div>
+          </div>
         </div>
+        <button class="sidebar-signout-btn" onclick="logoutUser()" title="Sign out of current account">
+          <span>🚪 Sign Out</span>
+        </button>
       </div>
+    </aside>
 
-      <h3 style="font-size: 1.2rem; color: #0f172a; margin-bottom: 1rem;">Featured Company Mentors</h3>
-      <div class="cards-grid" id="company-mentors-grid" style="margin-bottom: 2.5rem;">
-        <!-- Rendered by app.js -->
-      </div>
-
-      <div class="page-intro">
-        <div>
-          <h3>Community Direct Q&A Showcase</h3>
-          <p>Browse real advice and answers provided directly by industry professionals.</p>
+    <!-- RIGHT-HAND MAIN VIEWPORT -->
+    <div class="app-main-viewport">
+      <!-- Modern Sticky Topbar -->
+      <header class="app-topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle-btn" onclick="toggleSidebarMenu()" aria-label="Toggle navigation menu">
+            ☰
+          </button>
+          <div id="topbar-current-section" class="topbar-section-title">
+            Explore Teachers & Skills
+          </div>
         </div>
-      </div>
-      <div id="mentor-qa-feed">
-        <!-- Rendered by app.js -->
-      </div>
-    </section>
 
-    <!-- TAB 5: MY EXCHANGES & SESSIONS -->
-    <section id="tab-exchanges" class="tab-pane">
-      <div class="page-intro">
-        <div>
-          <h2>My Skill Exchanges & Tutoring Sessions</h2>
-          <p>Track your incoming and outgoing exchange proposals, escrow payments, and completed learning sessions.</p>
+        <div class="topbar-right">
+          <!-- Optional Persona Switcher (With Show/Hide Toggle) -->
+          <button class="btn btn-outline btn-sm" onclick="toggleTopbarPersona()" id="btn-toggle-topbar-persona"
+            title="Show or hide persona switcher"
+            style="font-size: 0.75rem; padding: 4px 8px; color: #4f46e5; border-color: #cbd5e1;">
+            🎭 Personas
+          </button>
+
+          <div class="topbar-persona-box" id="topbar-persona-box"
+            style="display: flex; align-items: center; gap: 0.35rem; background: #f1f5f9; padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Switch:</span>
+            <select class="persona-switcher" onchange="switchDemoPersona(this.value)" id="topbar-persona-select"
+              style="background: transparent; border: none; color: #0f172a; font-size: 0.8rem; font-weight: 600; cursor: pointer; outline: none;">
+              <option value="alice">Alice (C++ Expert)</option>
+              <option value="bob">Bob (Java Expert)</option>
+              <option value="confidential">Stealth Mentor (Confidential)</option>
+              <option value="maya">Maya Lin (Learner)</option>
+              <option value="sarah">Sarah (Google L6)</option>
+              <option value="rahul">Rahul (Amazon AWS)</option>
+            </select>
+          </div>
+
+          <div id="user-header-info" class="topbar-user-status">
+            <!-- Dynamically populated with status pills -->
+          </div>
+
+          <a href="/docs" target="_blank" class="btn btn-secondary btn-sm"
+            style="font-size: 0.78rem; padding: 4px 10px;" title="Interactive OpenAPI Swagger Specs">
+            ⚡ API Docs
+          </a>
+          <button class="btn btn-outline btn-sm" onclick="logoutUser()"
+            style="font-size: 0.78rem; padding: 4px 10px; color: #ef4444; border-color: #fca5a5;" title="Sign out">
+            🚪 Sign Out
+          </button>
         </div>
-      </div>
+      </header>
 
-      <div id="my-exchanges-container">
-        <!-- Rendered by app.js -->
-      </div>
-    </section>
-
-    <!-- TAB 6: MY PROFILE & PRIVACY CONTROLS -->
-    <section id="tab-profile" class="tab-pane">
-      <div class="page-intro">
-        <div>
-          <h2>Profile & Confidentiality Settings</h2>
-          <p>Manage your public identity, toggle anonymous mode, and maintain the list of skills you teach or want to
-            learn.</p>
-        </div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;">
-        <!-- Privacy & Profile Card -->
-        <div class="card">
-          <div class="card-body">
-            <h3 style="margin-bottom: 0.75rem;">Identity & Role Confidentiality Options</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
-              Decide whether you want to reveal your real identity or remain anonymous when offering to teach, and
-              similarly when seeking to be taught.
+      <!-- Main Workspace Content -->
+      <main class="app-main-content">
+        <!-- PERSISTENT ACTION HERO: TEACH OR LEARN WITH PRIVACY CONTROLS -->
+        <div class="action-hero">
+          <div>
+            <h2>Welcome, <span id="hero-user-name">Member</span>! 👋</h2>
+            <p>
+              Share what you know with the community or master new skills from top engineers. You have complete freedom
+              to teach or learn with your real identity or in 100% confidential stealth mode!
             </p>
-
-            <div id="privacy-preview-box" style="margin-bottom: 1.25rem;">
-              <!-- Dynamic preview -->
-            </div>
-
-            <!-- Option 1: Master Confidentiality -->
-            <div class="form-group"
-              style="display: flex; align-items: flex-start; gap: 0.75rem; background: #f8fafc; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
-              <input type="checkbox" id="prof-confidential-toggle"
-                style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;" onchange="updatePrivacyPreview()">
-              <label for="prof-confidential-toggle" style="margin: 0; cursor: pointer;">
-                <strong>Master Anonymous Mode (All Roles)</strong>
-                <span style="display: block; font-size: 0.75rem; color: #64748b; font-weight: normal;">
-                  Keep identity 100% confidential everywhere on SkillBridge.
-                </span>
-              </label>
-            </div>
-
-            <!-- Option 2: Teacher Specific Confidentiality -->
-            <div class="form-group"
-              style="display: flex; align-items: flex-start; gap: 0.75rem; background: #fefce8; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #fef08a; margin-bottom: 0.5rem;">
-              <input type="checkbox" id="prof-conf-teacher-toggle"
-                style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;" onchange="updatePrivacyPreview()">
-              <label for="prof-conf-teacher-toggle" style="margin: 0; cursor: pointer;">
-                <strong>👨‍🏫 Teacher Confidentiality Option</strong>
-                <span style="display: block; font-size: 0.75rem; color: #854d0e; font-weight: normal;">
-                  When offering to teach, hide real name, company, and bio. Show ONLY your alias and what you can teach
-                  / explain.
-                </span>
-              </label>
-            </div>
-
-            <!-- Option 3: Learner Specific Confidentiality -->
-            <div class="form-group"
-              style="display: flex; align-items: flex-start; gap: 0.75rem; background: #eff6ff; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 1rem;">
-              <input type="checkbox" id="prof-conf-learner-toggle"
-                style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;" onchange="updatePrivacyPreview()">
-              <label for="prof-conf-learner-toggle" style="margin: 0; cursor: pointer;">
-                <strong>🎓 Learner Confidentiality Option (Wanna Get Taught)</strong>
-                <span style="display: block; font-size: 0.75rem; color: #1e40af; font-weight: normal;">
-                  When seeking to be taught, hide real name and personal info. Show ONLY your alias and what you want to
-                  learn.
-                </span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label>Public Display Name / Alias (Always Visible):</label>
-              <input type="text" id="prof-display-name">
-            </div>
-
-            <div class="form-group">
-              <label>Full Real Name (Hidden in confidential mode):</label>
-              <input type="text" id="prof-full-name">
-            </div>
-
-            <div class="form-group">
-              <label>Email Address (Always Private):</label>
-              <input type="text" id="prof-email" disabled style="background: #f1f5f9;">
-            </div>
-
-            <div class="form-group">
-              <label>Phone Number (Hidden in confidential mode):</label>
-              <input type="text" id="prof-phone">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-              <div class="form-group">
-                <label>Company (Hidden in confidential mode):</label>
-                <input type="text" id="prof-company">
-              </div>
-              <div class="form-group">
-                <label>Job Title (Hidden in confidential mode):</label>
-                <input type="text" id="prof-job-title">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>Bio / Background (Hidden in confidential mode):</label>
-              <textarea id="prof-bio"></textarea>
-            </div>
-
-            <button class="btn btn-primary" onclick="saveProfileSettings()" style="width: 100%;">
-              💾 Save Profile & Privacy Settings
+          </div>
+          <div class="action-hero-btns">
+            <button class="btn btn-primary" onclick="openAddTeacherModal()">
+              👨‍🏫 Teach a Skill (Set Privacy)
+            </button>
+            <button class="btn btn-secondary" onclick="openAddLearnerModal()">
+              🎓 Wanna Get Taught (Set Privacy)
             </button>
           </div>
         </div>
 
-        <!-- Skills Management Card -->
-        <div class="card">
-          <div class="card-body">
-            <h3 style="margin-bottom: 0.75rem;">My Skills (Teaching & Learning)</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
-              List what you can teach (along with what you are good at explaining) and what you want to learn to enable
-              automatic barter matching.
-            </p>
-
-            <div id="my-skills-list" style="margin-bottom: 1.25rem;">
-              <!-- Rendered by app.js -->
-            </div>
-
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
-              <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.75rem;">➕ Add Skill to Profile</h4>
-
-              <div class="form-group">
-                <label>Select Master Skill:</label>
-                <select id="profile-skill-select" class="select-input" style="width: 100%;">
-                  <!-- Populated by app.js -->
-                </select>
-              </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group">
-                  <label>Role:</label>
-                  <select id="profile-skill-type" class="select-input" style="width: 100%;"
-                    onchange="toggleSkillTypeInputs()">
-                    <option value="TEACH">👨‍🏫 I want to TEACH this</option>
-                    <option value="LEARN">🎓 I want to get TAUGHT this (Learner)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Proficiency Level:</label>
-                  <select id="profile-skill-prof" class="select-input" style="width: 100%;">
-                    <option value="BEGINNER">Beginner</option>
-                    <option value="INTERMEDIATE">Intermediate</option>
-                    <option value="ADVANCED">Advanced</option>
-                    <option value="EXPERT">Expert</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- For Teachers: What are you good at explaining -->
-              <div class="form-group" id="teach-style-group">
-                <label>What are you good at explaining? (Teaching Style):</label>
-                <input type="text" id="profile-skill-style"
-                  placeholder="e.g. Explains pointer memory, live debugging, visual analogies...">
-              </div>
-
-              <!-- For Learners: What do you want explained / goals -->
-              <div class="form-group" id="learn-goal-group" style="display: none;">
-                <label>What do you want explained? (Learning Goal / Objective):</label>
-                <input type="text" id="profile-skill-goal"
-                  placeholder="e.g. Need help with multithreading, system design interview prep...">
-              </div>
-
-              <!-- Confidentiality Option for this specific skill listing -->
-              <div class="form-group"
-                style="display: flex; align-items: flex-start; gap: 0.5rem; background: #fff; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px dashed #cbd5e1;">
-                <input type="checkbox" id="profile-skill-confidential"
-                  style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer;">
-                <label for="profile-skill-confidential" style="margin: 0; font-size: 0.85rem; cursor: pointer;">
-                  <strong>🔒 Keep Identity Confidential for this listing</strong>
-                  <span style="display: block; font-size: 0.75rem; color: #64748b;">
-                    Only your alias and this skill will be visible. Your name and personal details will be hidden.
-                  </span>
-                </label>
-              </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group">
-                  <label>Exchange Preference:</label>
-                  <select id="profile-skill-pref" class="select-input" style="width: 100%;">
-                    <option value="BARTER_ONLY">Barter Only (Free)</option>
-                    <option value="PAID_ONLY">Demands Payment</option>
-                    <option value="BOTH">Open to Both</option>
-                    <option value="VOLUNTEER_FREE">Volunteer (Free)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Hourly Rate Demanded ($):</label>
-                  <input type="number" id="profile-skill-rate" value="0.0" min="0" step="1">
-                </div>
-              </div>
-
-              <button class="btn btn-success" onclick="addSkillToProfile()" style="width: 100%;">
-                Add Skill to Profile
-              </button>
+        <!-- TAB 1: TEACHER & SKILL CATALOG -->
+        <section id="tab-catalog" class="tab-pane active">
+          <div class="page-intro">
+            <div>
+              <h2>Explore Teachers & Learners Catalog</h2>
+              <p>Find peers and mentors who can teach what you need, or find learners seeking your knowledge. Learn via
+                skill barter (free mutual exchange) or paid tutoring.</p>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
-  </main>
 
-  <!-- MODAL 1: REQUEST EXCHANGE / TUTORING -->
+          <!-- Toggle between Teachers (Offering to Teach) and Learners (Wanting to be Taught) -->
+          <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button id="btn-view-teachers" class="btn btn-primary" onclick="setCatalogType('TEACH')">
+              👨‍🏫 Browse Teachers (People Offering to Teach)
+            </button>
+            <button id="btn-view-learners" class="btn btn-outline" onclick="setCatalogType('LEARN')">
+              🎓 Browse Learners (People Looking to be Taught)
+            </button>
+          </div>
+
+          <div class="filter-bar">
+            <input type="text" id="catalog-search" class="search-input"
+              placeholder="Search by skill name (e.g. C++, Java, Python)..." oninput="loadTeacherCatalog()">
+
+            <select id="filter-skill-select" class="select-input" onchange="loadTeacherCatalog()">
+              <option value="">All Skills</option>
+            </select>
+
+            <select id="filter-mode-select" class="select-input" onchange="loadTeacherCatalog()">
+              <option value="">All Exchange Modes</option>
+              <option value="BARTER_ONLY">Skill Barter Only ($0)</option>
+              <option value="PAID_ONLY">Paid Mentorship</option>
+              <option value="VOLUNTEER_FREE">Free Volunteer</option>
+            </select>
+
+            <select id="filter-confidential-select" class="select-input" onchange="loadTeacherCatalog()">
+              <option value="">All Identities</option>
+              <option value="true">🔒 Anonymous / Confidential Only</option>
+              <option value="false">👁️ Public Profiles Only</option>
+            </select>
+
+            <button class="btn btn-secondary btn-sm" onclick="loadTeacherCatalog()">Refresh</button>
+          </div>
+
+          <div class="cards-grid" id="catalog-grid">
+            <!-- Rendered by app.js -->
+          </div>
+        </section>
+
+        <!-- TAB 2: SMART 2-WAY BARTER MATCHER -->
+        <section id="tab-barter" class="tab-pane">
+          <div class="match-hero">
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.4rem;">Smart Peer-to-Peer Barter Algorithm</h2>
+            <p style="font-size: 0.95rem; opacity: 0.95;">
+              SkillBridge automatically pairs you with community members where a perfect mutual learning exchange
+              exists!
+              For example, if you know <strong>C++</strong> and want to learn <strong>Java</strong>, and another person
+              knows <strong>Java</strong> and wants to learn <strong>C++</strong>, you can exchange your knowledge
+              completely free of charge.
+            </p>
+          </div>
+
+          <div id="barter-matches-container">
+            <!-- Rendered by app.js -->
+          </div>
+        </section>
+
+        <!-- TAB 3: COMPANY INTERVIEW & TRAINING QUESTION BANK -->
+        <section id="tab-questions" class="tab-pane">
+          <div class="page-intro">
+            <div>
+              <h2>Company Interview & Corporate Training Question Bank</h2>
+              <p>Explore real questions asked during recruitment drives and training assessments at Google, Amazon,
+                Microsoft, TCS, Infosys, and more.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openContributeQuestionModal()">
+              ➕ Contribute Question
+            </button>
+          </div>
+
+          <div class="filter-bar">
+            <input type="text" id="question-search" class="search-input"
+              placeholder="Search keywords, topics, or tags..." oninput="loadQuestionBank()">
+
+            <select id="filter-company-select" class="select-input" onchange="loadQuestionBank()">
+              <option value="">All Companies</option>
+              <option value="Google">Google</option>
+              <option value="Amazon">Amazon</option>
+              <option value="Microsoft">Microsoft</option>
+              <option value="TCS">TCS</option>
+              <option value="Infosys">Infosys</option>
+            </select>
+
+            <select id="filter-difficulty-select" class="select-input" onchange="loadQuestionBank()">
+              <option value="">All Difficulties</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+
+            <button class="btn btn-secondary btn-sm" onclick="loadQuestionBank()">Filter</button>
+          </div>
+
+          <div id="questions-list-container">
+            <!-- Rendered by app.js -->
+          </div>
+        </section>
+
+        <!-- TAB 4: COMPANY MENTORS & DIRECT Q&A -->
+        <section id="tab-mentors" class="tab-pane">
+          <div class="page-intro">
+            <div>
+              <h2>Connect Directly with Company Professionals</h2>
+              <p>Verified software engineers and architects from major tech firms available for 1-on-1 direct Q&A, mock
+                interviews, and career coaching.</p>
+            </div>
+          </div>
+
+          <h3 style="font-size: 1.2rem; color: #0f172a; margin-bottom: 1rem;">Featured Company Mentors</h3>
+          <div class="cards-grid" id="company-mentors-grid" style="margin-bottom: 2.5rem;">
+            <!-- Rendered by app.js -->
+          </div>
+
+          <div class="page-intro">
+            <div>
+              <h3>Community Direct Q&A Showcase</h3>
+              <p>Browse real advice and answers provided directly by industry professionals.</p>
+            </div>
+          </div>
+          <div id="mentor-qa-feed">
+            <!-- Rendered by app.js -->
+          </div>
+        </section>
+
+        <!-- TAB 5: MY EXCHANGES & SESSIONS -->
+        <section id="tab-exchanges" class="tab-pane">
+          <div class="page-intro">
+            <div>
+              <h2>My Skill Exchanges & Tutoring Sessions</h2>
+              <p>Track your incoming and outgoing exchange proposals, escrow payments, and completed learning sessions.
+              </p>
+            </div>
+          </div>
+
+          <div id="my-exchanges-container">
+            <!-- Rendered by app.js -->
+          </div>
+        </section>
+
+        <!-- TAB 6: SKILLBRIDGE CHATTING PLACE & COMMUNITY LOUNGE -->
+        <section id="tab-chat" class="tab-pane">
+          <div class="page-intro">
+            <div>
+              <h2>💬 SkillBridge Chatting Place & Community Lounge</h2>
+              <p>The place where anyone on SkillBridge can chat! Join open community rooms to discuss code, interview
+                loops, and barter swaps with all members, or message any teacher or peer 1-on-1.</p>
+            </div>
+          </div>
+
+          <!-- Mode Switcher: Community Chatroom vs Direct 1-on-1 Messages -->
+          <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+            <button id="btn-chat-community" class="btn btn-primary" onclick="setChatMode('community')">
+              🌐 Community Lounge (Chat with Anyone Openly)
+            </button>
+            <button id="btn-chat-direct" class="btn btn-outline" onclick="setChatMode('direct')">
+              💬 Direct Messages (1-on-1)
+            </button>
+            <button class="btn btn-secondary" onclick="openUserDirectoryModal()" style="margin-left: auto;">
+              👥 Directory: Chat with Anyone (All Members)
+            </button>
+          </div>
+
+          <!-- VIEW 1: OPEN COMMUNITY CHATROOM / LOUNGE -->
+          <div id="chat-community-view" class="chat-workspace">
+            <!-- Channels Sidebar -->
+            <div class="chat-sidebar">
+              <div class="chat-sidebar-header">
+                <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a; margin-bottom: 0.25rem;">Chat Channels
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b;">Chat openly with all peers & mentors</div>
+              </div>
+              <div class="chat-conversation-list" id="community-channels-list">
+                <!-- Channels loaded by app.js -->
+              </div>
+            </div>
+
+            <!-- Community Chat Main Feed -->
+            <div class="chat-main">
+              <div class="chat-header">
+                <div class="chat-header-user">
+                  <div class="chat-avatar" id="comm-active-icon">🌐</div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;" id="comm-active-title">Global
+                      Community Lounge</div>
+                    <div style="font-size: 0.75rem; color: #64748b;" id="comm-active-desc">Chat with anyone across
+                      SkillBridge</div>
+                  </div>
+                </div>
+                <div>
+                  <span class="badge-tag badge-barter" style="font-size: 0.75rem;">🟢 Live Room</span>
+                </div>
+              </div>
+
+              <div class="chat-messages" id="community-messages-container">
+                <!-- Messages rendered by app.js -->
+              </div>
+
+              <form class="chat-input-bar" id="community-chat-form" onsubmit="handleSendCommunityMessage(event)">
+                <input type="text" id="community-chat-input"
+                  placeholder="Chat with everyone in this channel... (Press Enter to send)" autocomplete="off">
+                <button type="submit" class="btn btn-primary" id="comm-send-btn">Post 🚀</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- VIEW 2: DIRECT 1-ON-1 MESSAGES -->
+          <div id="chat-direct-view" class="chat-workspace" style="display: none;">
+            <!-- Left: Conversations List -->
+            <div class="chat-sidebar">
+              <div class="chat-sidebar-header">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">Direct Messages</span>
+                  <button class="btn btn-primary btn-sm" onclick="openUserDirectoryModal()"
+                    style="font-size: 0.75rem; padding: 2px 8px;">
+                    ➕ New Chat
+                  </button>
+                </div>
+                <input type="text" id="chat-search" class="search-input" placeholder="Search conversations..."
+                  oninput="filterConversations()" style="font-size: 0.82rem; padding: 0.4rem 0.6rem;">
+              </div>
+              <div class="chat-conversation-list" id="chat-conv-list">
+                <div class="chat-empty-state" style="padding: 1.5rem;">Loading conversations...</div>
+              </div>
+            </div>
+
+            <!-- Right: Active Chat View -->
+            <div class="chat-main" id="chat-main-view">
+              <div class="chat-empty-state" id="chat-placeholder">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">💬</div>
+                <h3 style="margin-bottom: 0.5rem;">Select a conversation to start chatting</h3>
+                <p style="font-size: 0.85rem; max-width: 340px; color: #64748b;">
+                  Pick a conversation from the left, click <strong>➕ New Chat</strong> to pick anyone from the
+                  directory, or click <strong>💬 Chat</strong> on any teacher or learner card!
+                </p>
+              </div>
+
+              <!-- Active Conversation Header & Messages -->
+              <div id="chat-active-container" style="display: none; height: 100%; flex-direction: column;">
+                <div class="chat-header">
+                  <div class="chat-header-user">
+                    <div class="chat-avatar" id="chat-active-avatar">?</div>
+                    <div>
+                      <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;" id="chat-active-name">User Name
+                      </div>
+                      <div style="font-size: 0.75rem; color: #64748b;" id="chat-active-subtitle">Direct Chat</div>
+                    </div>
+                  </div>
+                  <div id="chat-active-actions"></div>
+                </div>
+
+                <div class="chat-messages" id="chat-messages-container">
+                  <!-- Messages bubbles rendered here -->
+                </div>
+
+                <form class="chat-input-bar" id="chat-form" onsubmit="handleSendChatMessage(event)">
+                  <input type="text" id="chat-input" placeholder="Type your message... (Press Enter to send)"
+                    autocomplete="off">
+                  <button type="submit" class="btn btn-primary" id="chat-send-btn">Send 🚀</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 7: CONTACT SUPPORT & HELP DESK (ADVANCED SERVICE) -->
+        <section id="tab-support" class="tab-pane">
+          <div class="page-intro">
+            <div>
+              <h2>🎧 Contact Support & Help Desk</h2>
+              <p>Need help with a skill barter, escrow payment, confidentiality setting, or mentor session? Our
+                engineering and support team is here to help 24/7.</p>
+            </div>
+            <div>
+              <span class="system-status-pill">
+                🟢 All Systems Operational
+              </span>
+            </div>
+          </div>
+
+          <div class="support-grid">
+            <!-- Left: Submit Support Ticket Form -->
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 0.5rem;">📩 Submit a Support Request</h3>
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem;">
+                  Fill out the ticket below. Our support team typically responds in less than 2 hours.
+                </p>
+
+                <form id="support-ticket-form" onsubmit="handleSupportSubmit(event)">
+                  <div class="form-group">
+                    <label>Category of Issue:</label>
+                    <select id="support-cat" class="select-input" style="width: 100%;" required>
+                      <option value="Privacy & Confidentiality">🔒 Privacy & Confidentiality Control</option>
+                      <option value="Escrow & Payments">💳 Escrow & Payments</option>
+                      <option value="Barter Swap">🤝 Barter Matching & Swap Details</option>
+                      <option value="Company Mentors">🏢 Verified Company Mentors</option>
+                      <option value="General Support">❓ General Inquiry / Account</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Subject / Summary:</label>
+                    <input type="text" id="support-subject" placeholder="Brief summary of your inquiry..." required>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Your Contact Email:</label>
+                    <input type="email" id="support-email" placeholder="your-email@example.com" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Priority Level:</label>
+                    <select id="support-priority" class="select-input" style="width: 100%;">
+                      <option value="NORMAL">Normal Priority</option>
+                      <option value="URGENT">Urgent (Session or Escrow Issue)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Detailed Message & Description:</label>
+                    <textarea id="support-message" rows="4"
+                      placeholder="Explain what happened or what you need assistance with..." required></textarea>
+                  </div>
+
+                  <button type="submit" class="btn btn-primary" style="width: 100%;" id="btn-submit-support">
+                    Submit Support Ticket 🚀
+                  </button>
+                </form>
+
+                <div id="support-my-tickets"
+                  style="margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                  <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem;">📋 Your Recent Support Tickets</h4>
+                  <div id="support-tickets-list">
+                    <!-- Rendered by app.js -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: FAQs & Direct Contacts -->
+            <div>
+              <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-body">
+                  <h3 style="margin-bottom: 0.5rem;">💡 Frequently Asked Questions</h3>
+                  <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+                    Quick answers to common questions about SkillBridge platform mechanics.
+                  </p>
+
+                  <div id="faq-accordion-list">
+                    <!-- Rendered dynamically by app.js -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Direct Contact Card -->
+              <div class="card">
+                <div class="card-body">
+                  <h3 style="margin-bottom: 0.5rem;">📞 Direct Contact & SLA</h3>
+                  <div
+                    style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem; margin-top: 0.75rem;">
+                    <div>
+                      <strong>✉️ Support Email:</strong>
+                      <a href="mailto:support@skillbridge.dev"
+                        style="color: #4f46e5; text-decoration: none;">support@skillbridge.dev</a>
+                    </div>
+                    <div>
+                      <strong>☎️ Phone Helpline:</strong>
+                      <span style="color: #475569;">+1 (800) 555-SKILL (Toll-Free)</span>
+                    </div>
+                    <div>
+                      <strong>⏱️ Average SLA Response:</strong>
+                      <span style="color: #059669; font-weight: 600;">Within 2 Hours</span>
+                    </div>
+                    <div>
+                      <strong>🛡️ Escrow Guarantee:</strong>
+                      <span style="color: #475569;">100% money-back escrow protection on disputed mentorship
+                        sessions.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 8: MY PROFILE & PRIVACY CONTROLS -->
+        <section id="tab-profile" class="tab-pane">
+          <div class="page-intro">
+            <div>
+              <h2>Profile & Confidentiality Settings</h2>
+              <p>Manage your public identity, toggle anonymous mode, and maintain the list of skills you teach or want
+                to
+                learn.</p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem;">
+            <!-- Privacy & Profile Card -->
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 0.75rem;">Identity & Role Confidentiality Options</h3>
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+                  Decide whether you want to reveal your real identity or remain anonymous when offering to teach, and
+                  similarly when seeking to be taught.
+                </p>
+
+                <div id="privacy-preview-box" style="margin-bottom: 1.25rem;">
+                  <!-- Dynamic preview -->
+                </div>
+
+                <!-- Option 1: Master Confidentiality -->
+                <div class="form-group"
+                  style="display: flex; align-items: flex-start; gap: 0.75rem; background: #f8fafc; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0.5rem;">
+                  <input type="checkbox" id="prof-confidential-toggle"
+                    style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;"
+                    onchange="updatePrivacyPreview()">
+                  <label for="prof-confidential-toggle" style="margin: 0; cursor: pointer;">
+                    <strong>Master Anonymous Mode (All Roles)</strong>
+                    <span style="display: block; font-size: 0.75rem; color: #64748b; font-weight: normal;">
+                      Keep identity 100% confidential everywhere on SkillBridge.
+                    </span>
+                  </label>
+                </div>
+
+                <!-- Option 2: Teacher Specific Confidentiality -->
+                <div class="form-group"
+                  style="display: flex; align-items: flex-start; gap: 0.75rem; background: #fefce8; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #fef08a; margin-bottom: 0.5rem;">
+                  <input type="checkbox" id="prof-conf-teacher-toggle"
+                    style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;"
+                    onchange="updatePrivacyPreview()">
+                  <label for="prof-conf-teacher-toggle" style="margin: 0; cursor: pointer;">
+                    <strong>👨‍🏫 Teacher Confidentiality Option</strong>
+                    <span style="display: block; font-size: 0.75rem; color: #854d0e; font-weight: normal;">
+                      When offering to teach, hide real name, company, and bio. Show ONLY your alias and what you can
+                      teach
+                      / explain.
+                    </span>
+                  </label>
+                </div>
+
+                <!-- Option 3: Learner Specific Confidentiality -->
+                <div class="form-group"
+                  style="display: flex; align-items: flex-start; gap: 0.75rem; background: #eff6ff; padding: 0.75rem 0.85rem; border-radius: 8px; border: 1px solid #bfdbfe; margin-bottom: 1rem;">
+                  <input type="checkbox" id="prof-conf-learner-toggle"
+                    style="width: 20px; height: 20px; margin-top: 2px; cursor: pointer;"
+                    onchange="updatePrivacyPreview()">
+                  <label for="prof-conf-learner-toggle" style="margin: 0; cursor: pointer;">
+                    <strong>🎓 Learner Confidentiality Option (Wanna Get Taught)</strong>
+                    <span style="display: block; font-size: 0.75rem; color: #1e40af; font-weight: normal;">
+                      When seeking to be taught, hide real name and personal info. Show ONLY your alias and what you
+                      want to
+                      learn.
+                    </span>
+                  </label>
+                </div>
+
+                <!-- Granular Personal Details Visibility (Teachers & Learners) -->
+                <div
+                  style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.85rem; margin-bottom: 1rem;">
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #1e293b; margin-bottom: 0.35rem;">
+                    📋 Selective Personal Details Control (When Public)
+                  </div>
+                  <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">
+                    Choose exactly which personal contact and identity items you want visible to people browsing the
+                    catalog:
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label
+                      style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; cursor: pointer;">
+                      <input type="checkbox" id="prof-show-phone" style="width: 16px; height: 16px;"
+                        onchange="updatePrivacyPreview()">
+                      <span>📞 Show Phone Number on profile & catalog</span>
+                    </label>
+                    <label
+                      style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; cursor: pointer;">
+                      <input type="checkbox" id="prof-show-email" style="width: 16px; height: 16px;"
+                        onchange="updatePrivacyPreview()">
+                      <span>✉️ Show Email Address on profile & catalog</span>
+                    </label>
+                    <label
+                      style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; cursor: pointer;">
+                      <input type="checkbox" id="prof-show-real-name" style="width: 16px; height: 16px;" checked
+                        onchange="updatePrivacyPreview()">
+                      <span>👤 Show Real Full Name (uncheck to show only Display Name)</span>
+                    </label>
+                    <label
+                      style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; cursor: pointer;">
+                      <input type="checkbox" id="prof-show-company" style="width: 16px; height: 16px;" checked
+                        onchange="updatePrivacyPreview()">
+                      <span>🏢 Show Current Company & Job Title</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Public Display Name / Alias (Always Visible):</label>
+                  <input type="text" id="prof-display-name">
+                </div>
+
+                <div class="form-group">
+                  <label>Full Real Name (Hidden in confidential mode):</label>
+                  <input type="text" id="prof-full-name">
+                </div>
+
+                <div class="form-group">
+                  <label>Email Address (Always Private):</label>
+                  <input type="text" id="prof-email" disabled style="background: #f1f5f9;">
+                </div>
+
+                <div class="form-group">
+                  <label>Phone Number (Hidden in confidential mode):</label>
+                  <input type="text" id="prof-phone">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <div class="form-group">
+                    <label>Company (Hidden in confidential mode):</label>
+                    <input type="text" id="prof-company">
+                  </div>
+                  <div class="form-group">
+                    <label>Job Title (Hidden in confidential mode):</label>
+                    <input type="text" id="prof-job-title">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Bio / Background (Hidden in confidential mode):</label>
+                  <textarea id="prof-bio"></textarea>
+                </div>
+
+                <button class="btn btn-primary" onclick="saveProfileSettings()" style="width: 100%;">
+                  💾 Save Profile & Privacy Settings
+                </button>
+              </div>
+            </div>
+
+            <!-- Skills Management Card -->
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 0.75rem;">My Skills (Teaching & Learning)</h3>
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+                  List what you can teach (along with what you are good at explaining) and what you want to learn to
+                  enable
+                  automatic barter matching.
+                </p>
+
+                <div id="my-skills-list" style="margin-bottom: 1.25rem;">
+                  <!-- Rendered by app.js -->
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                  <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.75rem;">➕ Add Skill to Profile</h4>
+
+                  <div class="form-group">
+                    <label>Select Skill:</label>
+                    <select id="profile-skill-select" class="select-input" style="width: 100%;">
+                      <!-- Populated by app.js -->
+                    </select>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                      <label>Role:</label>
+                      <select id="profile-skill-type" class="select-input" style="width: 100%;"
+                        onchange="toggleSkillTypeInputs()">
+                        <option value="TEACH">👨‍🏫 I want to TEACH this</option>
+                        <option value="LEARN">🎓 I want to get TAUGHT this (Learner)</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Proficiency Level:</label>
+                      <select id="profile-skill-prof" class="select-input" style="width: 100%;">
+                        <option value="BEGINNER">Beginner</option>
+                        <option value="INTERMEDIATE">Intermediate</option>
+                        <option value="ADVANCED">Advanced</option>
+                        <option value="EXPERT">Expert</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- For Teachers: What are you good at explaining -->
+                  <div class="form-group" id="teach-style-group">
+                    <label>What are you good at explaining? (Teaching Style):</label>
+                    <input type="text" id="profile-skill-style"
+                      placeholder="e.g. Explains pointer memory, live debugging, visual analogies...">
+                  </div>
+
+                  <!-- For Learners: What do you want explained / goals -->
+                  <div class="form-group" id="learn-goal-group" style="display: none;">
+                    <label>What do you want explained? (Learning Goal / Objective):</label>
+                    <input type="text" id="profile-skill-goal"
+                      placeholder="e.g. Need help with multithreading, system design interview prep...">
+                  </div>
+
+                  <!-- Confidentiality Option for this specific skill listing -->
+                  <div class="form-group"
+                    style="display: flex; align-items: flex-start; gap: 0.5rem; background: #fff; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                    <input type="checkbox" id="profile-skill-confidential"
+                      style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer;">
+                    <label for="profile-skill-confidential" style="margin: 0; font-size: 0.85rem; cursor: pointer;">
+                      <strong>🔒 Keep Identity Confidential for this listing</strong>
+                      <span style="display: block; font-size: 0.75rem; color: #64748b;">
+                        Only your alias and this skill will be visible. Your name and personal details will be hidden.
+                      </span>
+                    </label>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                      <label>Exchange Preference:</label>
+                      <select id="profile-skill-pref" class="select-input" style="width: 100%;">
+                        <option value="BARTER_ONLY">Barter Only (Free)</option>
+                        <option value="PAID_ONLY">Demands Payment</option>
+                        <option value="BOTH">Open to Both</option>
+                        <option value="VOLUNTEER_FREE">Volunteer (Free)</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Hourly Rate ($ USD if demanding pay):</label>
+                      <input type="number" id="profile-skill-rate" value="0.0" min="0" step="5">
+                    </div>
+                  </div>
+
+                  <button class="btn btn-secondary btn-sm" onclick="addSkillToProfile()" style="width: 100%;">
+                    ➕ Add to My Profile Skills
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Viewport Footer -->
+      <footer class="app-viewport-footer">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <strong>SkillBridge</strong> • Peer-to-Peer Skill Sharing & Confidential Mentorship Platform
+          </div>
+          <div>
+            Built with FastAPI, SQLAlchemy, Docker, Postman & Swagger OpenAPI.
+          </div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ==================== 3. MODALS & POPUPS ==================== -->
+
+  <!-- MODAL 1: PROPOSE SKILL EXCHANGE / REQUEST TUTORING -->
   <div class="modal-overlay" id="exchange-modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 style="color: #0f172a;">Request Skill Exchange / Tutoring</h3>
+        <h3 id="modal-exchange-title" style="color: #0f172a;">Request Tutoring / Propose Barter</h3>
         <button class="close-modal-btn" onclick="closeModals()">&times;</button>
       </div>
       <div>
         <input type="hidden" id="req-receiver-id">
-        <input type="hidden" id="req-requested-skill-id">
+        <input type="hidden" id="req-target-mode">
 
-        <div style="background: #f1f5f9; padding: 0.85rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;">
-          <div><strong>Teacher:</strong> <span id="req-teacher-display"></span></div>
-          <div><strong>Subject:</strong> <span id="req-skill-display"></span></div>
-          <div><strong>Standard Fee:</strong> <span id="req-price-display"></span></div>
+        <div
+          style="background: #eef2ff; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; color: #3730a3; font-size: 0.9rem;">
+          Connecting with: <strong id="modal-exchange-target"></strong> (<span id="modal-exchange-skill"></span>)
         </div>
 
         <div class="form-group">
-          <label>Exchange Mode:</label>
-          <select id="req-exchange-type" class="select-input" style="width: 100%;"
-            onchange="toggleExchangeModeFields()">
-            <option value="BARTER">Skill-for-Skill Barter ($0 Swap)</option>
-            <option value="PAID_ONE_WAY">Paid Tutoring (You pay teacher demanded fee)</option>
-            <option value="FREE">Free Community Mentorship</option>
+          <label>Exchange Model:</label>
+          <select id="req-exchange-type" class="select-input" style="width: 100%;" onchange="toggleExchangeInputs()">
+            <option value="BARTER">🤝 Skill-for-Skill Barter ($0 Swap)</option>
+            <option value="PAID_ONE_WAY">💳 Paid Tutoring (Escrow Protected)</option>
+            <option value="FREE_MENTORSHIP">🌱 Free Mentorship</option>
           </select>
         </div>
 
         <div class="form-group" id="barter-specific-group">
-          <label>Select Skill You Will Teach in Return:</label>
+          <label>Skill You Offer to Teach in Exchange:</label>
           <select id="req-offer-skill" class="select-input" style="width: 100%;">
-            <!-- Master skills populated -->
+            <!-- Populated by app.js -->
           </select>
           <small>Example: You teach C++ in return for learning Java.</small>
         </div>
@@ -472,6 +1068,18 @@
           <label>Learning Objectives & Schedule Notes:</label>
           <textarea id="req-session-details"
             placeholder="Introduce yourself, what concepts you want to cover, and your availability..."></textarea>
+        </div>
+
+        <!-- Learner Identity Privacy Checkbox -->
+        <div class="form-group"
+          style="display: flex; align-items: flex-start; gap: 0.5rem; background: #eff6ff; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid #bfdbfe; margin-top: 0.5rem;">
+          <input type="checkbox" id="req-hide-identity" style="width: 18px; height: 18px; margin-top: 2px;">
+          <label for="req-hide-identity" style="margin: 0; font-size: 0.85rem; cursor: pointer;">
+            <strong>🔒 Keep My Identity Confidential for this Session</strong>
+            <span style="display: block; font-size: 0.75rem; color: #1e40af;">
+              Hide my real name, company, email, and phone from the teacher. Only my alias and learning goals are shown.
+            </span>
+          </label>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
@@ -621,18 +1229,202 @@
     </div>
   </div>
 
-  <!-- Footer -->
-  <footer>
-    <div
-      style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-      <div>
-        <strong>SkillBridge</strong> • Major Project Platform • RESTful Web Services with Python FastAPI & MySQL
+  <!-- MODAL 5: CHAT WITH ANYONE DIRECTORY -->
+  <div class="modal-overlay" id="user-directory-modal">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 style="color: #0f172a;">👥 SkillBridge Member Directory — Chat with Anyone</h3>
+        <button class="close-modal-btn" onclick="closeModals()">&times;</button>
       </div>
       <div>
-        Built with FastAPI, SQLAlchemy, Docker, Postman & Swagger OpenAPI.
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">
+          Select anyone on SkillBridge to start a 1-on-1 direct conversation immediately!
+        </p>
+        <input type="text" id="directory-search-input" class="search-input"
+          placeholder="Search by name, skill, company (e.g. Google, C++, Java)..." oninput="filterUserDirectory()"
+          style="margin-bottom: 1rem; width: 100%;">
+
+        <div id="user-directory-list"
+          style="max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.65rem;">
+          <!-- Rendered by app.js -->
+        </div>
       </div>
     </div>
-  </footer>
+  </div>
+
+  <!-- MODAL 6: BECOME A TEACHER / ADD TEACHING PROFILE WITH PRIVACY CHOICES -->
+  <div class="modal-overlay" id="modal-add-teacher">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 style="color: #0f172a;">👨‍🏫 Teach a Skill — Create Teaching Profile</h3>
+        <button class="close-modal-btn" onclick="closeModals()">&times;</button>
+      </div>
+      <div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+          Add a skill you can teach. You can choose whether to reveal your real identity to learners or keep it
+          completely confidential!
+        </p>
+
+        <form id="form-add-teacher" onsubmit="handleCreateTeacherProfile(event)">
+          <div class="form-group">
+            <label>Select Master Skill to Teach:</label>
+            <select id="modal-teach-skill-id" class="select-input" style="width: 100%;" required>
+              <!-- Populated by app.js -->
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label>Your Proficiency Level:</label>
+              <select id="modal-teach-prof" class="select-input" style="width: 100%;">
+                <option value="INTERMEDIATE">Intermediate</option>
+                <option value="ADVANCED" selected>Advanced</option>
+                <option value="EXPERT">Expert</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Years of Experience:</label>
+              <input type="number" id="modal-teach-exp" value="3.5" min="0.5" step="0.5" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>What are you good at explaining? (Teaching Style, Optional):</label>
+            <textarea id="modal-teach-style" rows="2"
+              placeholder="e.g. Memory layouts, pointer diagrams, microservices architecture, live debugging... (Optional)"></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label>Exchange Model:</label>
+              <select id="modal-teach-pref" class="select-input" style="width: 100%;">
+                <option value="BARTER_ONLY">🤝 Barter Only ($0 Swap)</option>
+                <option value="PAID_ONLY">💳 Paid Tutoring Only</option>
+                <option value="BOTH">Open to Both Barter & Paid</option>
+                <option value="VOLUNTEER_FREE">🌱 Free Volunteer Mentorship</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Hourly Rate ($ USD if demanding pay):</label>
+              <input type="number" id="modal-teach-rate" value="0.0" min="0" step="5">
+            </div>
+          </div>
+
+          <!-- Explicit Teacher Confidentiality Choice (Core User Requirement) -->
+          <div
+            style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 0.85rem; margin: 1rem 0;">
+            <div style="font-weight: 700; font-size: 0.88rem; color: #854d0e; margin-bottom: 0.4rem;">
+              🔒 Teacher Identity & Personal Details Visibility:
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <label
+                style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.82rem; color: #713f12; cursor: pointer;">
+                <input type="checkbox" id="modal-teach-confidential" style="margin-top: 2px;">
+                <span>
+                  <strong>Keep My Teacher Profile Confidential (Anonymous Mode)</strong>
+                  <span style="display: block; font-size: 0.75rem; color: #854d0e;">
+                    Learners will ONLY see your alias and teaching abilities. Real name, company, email, and phone are
+                    completely hidden.
+                  </span>
+                </span>
+              </label>
+
+              <div style="display: flex; gap: 1rem; margin-top: 0.25rem;">
+                <label
+                  style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #713f12; cursor: pointer;">
+                  <input type="checkbox" id="modal-teach-show-phone">
+                  <span>Show Phone Number (if public)</span>
+                </label>
+                <label
+                  style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #713f12; cursor: pointer;">
+                  <input type="checkbox" id="modal-teach-show-email">
+                  <span>Show Email (if public)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+            <button type="button" class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Publish Teaching Profile 🚀</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 7: WANNA GET TAUGHT / ADD LEARNING GOAL WITH LEARNER PRIVACY -->
+  <div class="modal-overlay" id="modal-add-learner">
+    <div class="modal-content" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 style="color: #0f172a;">🎓 Add Learning Goal — I Want to Get Taught</h3>
+        <button class="close-modal-btn" onclick="closeModals()">&times;</button>
+      </div>
+      <div>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+          Tell the community what skill you want to learn. You have the option to keep your identity confidential before
+          starting to get taught!
+        </p>
+
+        <form id="form-add-learner" onsubmit="handleCreateLearnerProfile(event)">
+          <div class="form-group">
+            <label>Select Skill You Want to Learn:</label>
+            <select id="modal-learn-skill-id" class="select-input" style="width: 100%;" required>
+              <!-- Populated by app.js -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Your Current Level:</label>
+            <select id="modal-learn-prof" class="select-input" style="width: 100%;">
+              <option value="BEGINNER" selected>Beginner (Absolute Starter)</option>
+              <option value="INTERMEDIATE">Intermediate (Know basics, need advanced concepts)</option>
+              <option value="ADVANCED">Advanced (Exam / Interview level)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>What do you want to learn? (Learning Objectives / Target, Optional):</label>
+            <textarea id="modal-learn-goal" rows="3"
+              placeholder="e.g. Preparing for interviews, exam review, or assignments... (Optional)"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Preferred Learning Model:</label>
+            <select id="modal-learn-pref" class="select-input" style="width: 100%;">
+              <option value="BARTER_ONLY">🤝 Skill Barter (I will teach something in return for free)</option>
+              <option value="PAID_ONLY">💳 Paid Tutoring (I am willing to pay an hourly rate)</option>
+              <option value="BOTH">Open to both Barter & Paid</option>
+            </select>
+          </div>
+
+          <!-- Explicit Learner Confidentiality Option (Core User Requirement) -->
+          <div
+            style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.85rem; margin: 1rem 0;">
+            <div style="font-weight: 700; font-size: 0.88rem; color: #1e40af; margin-bottom: 0.4rem;">
+              🔒 Learner Confidentiality (Hide Identity Before Getting Taught):
+            </div>
+            <label
+              style="display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.82rem; color: #1e3a8a; cursor: pointer;">
+              <input type="checkbox" id="modal-learn-confidential" checked style="margin-top: 2px;">
+              <span>
+                <strong>Keep My Identity Confidential as a Learner</strong>
+                <span style="display: block; font-size: 0.75rem; color: #1e40af; margin-top: 2px;">
+                  Teachers and peers will NOT see your real name, employer, phone, or email. They will only see your
+                  display name and what you want to learn.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+            <button type="button" class="btn btn-secondary" onclick="closeModals()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Learning Goal 🚀</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <script src="/static/js/app.js"></script>
 </body>

@@ -650,6 +650,128 @@
           }
         }
       ]
+    },
+    {
+      "name": "6. Direct Peer & Teacher Chat",
+      "item": [
+        {
+          "name": "Send Direct Chat Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiver_id\": 2,\n  \"content\": \"Hi Bob! I saw your Java Spring Boot profile. Would you be open to a 2-hour barter swap for C++ STL pointers?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chat", "messages"]
+            }
+          }
+        },
+        {
+          "name": "List Active Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chat", "conversations"]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation Thread with User (Auto Marks Read)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/conversations/2",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chat", "conversations", "2"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Customer Support & Help Desk",
+      "item": [
+        {
+          "name": "Get Platform FAQs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/support/faq",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "support", "faq"]
+            }
+          }
+        },
+        {
+          "name": "Submit Support Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Escrow & Payments\",\n  \"subject\": \"Escrow release timeline inquiry\",\n  \"message\": \"How many business days does it take for funds to be released upon session confirmation?\",\n  \"contact_email\": \"user@skillbridge.dev\",\n  \"priority\": \"NORMAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/support/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "support", "tickets"]
+            }
+          }
+        },
+        {
+          "name": "Get My Support Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/support/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "support", "tickets"]
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -149,6 +149,7 @@ def get_exchange_details(
 
     return build_exchange_response(ex)
 
+@router.put("/{exchange_id}/status", response_model=ExchangeResponse)
 @router.patch("/{exchange_id}/status", response_model=ExchangeResponse)
 def update_exchange_status(
     exchange_id: int,

@@ -8,6 +8,8 @@ from app.models.skill import Skill, UserSkill
 from app.models.exchange import ExchangeRequest, Review
 from app.models.question_bank import InterviewQuestion, QuestionVote
 from app.models.company_mentor import CompanyMentorProfile, DirectMentorQuestion
+from app.models.chat import ChatMessage, CommunityMessage
+from app.models.support import SupportTicket
 
 def seed_database():
     print("Initializing database tables...")
@@ -42,7 +44,7 @@ def seed_database():
             skill_map[name] = skill
 
         print("Seeding Users...")
-        # 1. Alice - Knows C++, wants to learn Java (Barter)
+        # 1. Alice - Knows C++, wants to learn Java (Barter, Public details with phone & email shown)
         alice = User(
             email="alice@skillbridge.dev",
             full_name="Alice Chen",
@@ -53,10 +55,14 @@ def seed_database():
             company="FinTech Core",
             job_title="C++ Systems Engineer",
             is_confidential=False,
+            show_phone=True,
+            show_email=True,
+            show_real_name=True,
+            show_company=True,
             is_company_verified=True
         )
 
-        # 2. Bob - Knows Java, wants to learn C++ (Barter)
+        # 2. Bob - Knows Java, wants to learn C++ (Barter, hides personal phone & email)
         bob = User(
             email="bob@skillbridge.dev",
             full_name="Bob Smith",
@@ -67,6 +73,10 @@ def seed_database():
             company="Enterprise Soft",
             job_title="Backend Developer",
             is_confidential=False,
+            show_phone=False, # Hidden phone
+            show_email=False, # Hidden email
+            show_real_name=True,
+            show_company=True,
             is_company_verified=True
         )
 
@@ -83,10 +93,14 @@ def seed_database():
             is_confidential=True, # Identity hidden!
             is_confidential_teacher=True,
             is_confidential_learner=True,
+            show_phone=False,
+            show_email=False,
+            show_real_name=False,
+            show_company=False,
             is_company_verified=True
         )
 
-        # 4. Sarah Jenkins - Staff Engineer at Google (Free AMA / Mentorship)
+        # 4. Sarah Jenkins - Staff Engineer at Google (Free AMA / Mentorship, shows email only)
         sarah = User(
             email="sarah.google@skillbridge.dev",
             full_name="Sarah Jenkins",
@@ -99,10 +113,14 @@ def seed_database():
             is_confidential=False,
             is_confidential_teacher=False,
             is_confidential_learner=False,
+            show_phone=False, # Hidden phone
+            show_email=True,  # Shown email
+            show_real_name=True,
+            show_company=True,
             is_company_verified=True
         )
 
-        # 5. Rahul Sharma - Solutions Architect at Amazon (Paid Mock Interview)
+        # 5. Rahul Sharma - Solutions Architect at Amazon (Paid Mock Interview, shows phone only)
         rahul = User(
             email="rahul.amazon@skillbridge.dev",
             full_name="Rahul Sharma",
@@ -115,6 +133,10 @@ def seed_database():
             is_confidential=False,
             is_confidential_teacher=False,
             is_confidential_learner=False,
+            show_phone=True,  # Shown phone
+            show_email=False, # Hidden email
+            show_real_name=True,
+            show_company=True,
             is_company_verified=True
         )
 
@@ -131,6 +153,10 @@ def seed_database():
             is_confidential=False, # General profile visible
             is_confidential_teacher=False,
             is_confidential_learner=True, # LEARNER IDENTITY CONFIDENTIAL!
+            show_phone=False,
+            show_email=False,
+            show_real_name=False,
+            show_company=False,
             is_company_verified=True
         )
 
@@ -434,6 +460,143 @@ def seed_database():
             session_details="1-on-1 tutoring on building high-performance FastAPI backends with async SQLAlchemy."
         )
         db.add_all([barter_ex, paid_ex])
+        db.flush()
+
+        print("Seeding Sample Direct Chat Messages between peers and mentors...")
+        # 1. Chat between Alice (C++ Teacher) and Bob (Java Teacher)
+        chat1 = ChatMessage(
+            sender_id=alice.id,
+            receiver_id=bob.id,
+            content="Hi Bob! I noticed from the Barter Matcher that you want to learn C++ memory pointers, and you teach Java Spring Boot. Would you like to do a 2-hour swap?",
+            is_read=True,
+            created_at=datetime.now(timezone.utc)
+        )
+        chat2 = ChatMessage(
+            sender_id=bob.id,
+            receiver_id=alice.id,
+            content="Hey Alice! Absolutely! We have a microservice that is hitting GC pauses, so understanding cache-friendly C++ data structures will really help.",
+            is_read=True,
+            created_at=datetime.now(timezone.utc)
+        )
+        chat3 = ChatMessage(
+            sender_id=alice.id,
+            receiver_id=bob.id,
+            content="Awesome! I've accepted our barter swap proposal. Let's schedule our first session this Saturday.",
+            is_read=False,
+            created_at=datetime.now(timezone.utc)
+        )
+
+        # 2. Chat between Maya (Confidential Learner) and Rahul (Amazon Mentor)
+        chat4 = ChatMessage(
+            sender_id=maya.id,
+            receiver_id=rahul.id,
+            content="Hello Rahul! I saw your mentor profile on SkillBridge. Could we do an AWS Solutions Architect mock interview next week?",
+            is_read=True,
+            created_at=datetime.now(timezone.utc)
+        )
+        chat5 = ChatMessage(
+            sender_id=rahul.id,
+            receiver_id=maya.id,
+            content="Hi Maya! Yes, of course. Please review the AWS Well-Architected Framework whitepaper, and prepare your STAR format answers before we start.",
+            is_read=False,
+            created_at=datetime.now(timezone.utc)
+        )
+
+        db.add_all([chat1, chat2, chat3, chat4, chat5])
+        db.flush()
+
+        print("Seeding Public Community Lounge Messages (Global Chatting Place)...")
+        # Global Lobby
+        comm1 = CommunityMessage(
+            sender_id=alice.id,
+            channel="general",
+            content="Welcome to the SkillBridge Community Lounge! 👋 Excited to connect with fellow devs and trade knowledge.",
+            created_at=datetime.now(timezone.utc)
+        )
+        comm2 = CommunityMessage(
+            sender_id=bob.id,
+            channel="general",
+            content="Hey everyone! Looking forward to trading Java Spring Boot knowledge for modern C++ pointers.",
+            created_at=datetime.now(timezone.utc)
+        )
+        comm3 = CommunityMessage(
+            sender_id=sarah.id,
+            channel="general",
+            content="Hello everyone! Sarah here from Google. Feel free to ping me for distributed systems & backend career advice!",
+            created_at=datetime.now(timezone.utc)
+        )
+        comm4 = CommunityMessage(
+            sender_id=rahul.id,
+            channel="general",
+            content="Greetings! Rahul from AWS. If anyone has questions on AWS architectures or Amazon loops, drop a message in #interview-prep or DM me.",
+            created_at=datetime.now(timezone.utc)
+        )
+        comm5 = CommunityMessage(
+            sender_id=maya.id,
+            channel="general",
+            content="Hi everyone! Preparing for system design rounds. Love the community vibe here!",
+            created_at=datetime.now(timezone.utc)
+        )
+
+        # Code & Tech
+        comm6 = CommunityMessage(
+            sender_id=alice.id,
+            channel="code-and-tech",
+            content="C++ Tip of the day: Use `std::span` (C++20) for bounds-safe array viewing without dynamic allocation overhead!",
+            created_at=datetime.now(timezone.utc)
+        )
+        comm7 = CommunityMessage(
+            sender_id=bob.id,
+            channel="code-and-tech",
+            content="Java 21 Virtual Threads (Loom) are game changers for high-throughput microservices. Anyone benchmarking them in prod?",
+            created_at=datetime.now(timezone.utc)
+        )
+
+        # Interview Prep
+        comm8 = CommunityMessage(
+            sender_id=rahul.id,
+            channel="interview-prep",
+            content="Amazon Tip: For Leadership Principles, have at least two well-rehearsed STAR stories per LP with quantified impact (e.g. reduced latency by 35%).",
+            created_at=datetime.now(timezone.utc)
+        )
+        comm9 = CommunityMessage(
+            sender_id=sarah.id,
+            channel="interview-prep",
+            content="Google System Design: Spend the first 5 minutes clarifying non-functional requirements (p99 latency, read/write ratio, consistency vs availability).",
+            created_at=datetime.now(timezone.utc)
+        )
+
+        # Barter Hub
+        comm10 = CommunityMessage(
+            sender_id=alice.id,
+            channel="barter-hub",
+            content="[Barter Offer] Offering: 2 hours of C++ STL & Memory Management. Looking for: Spring Boot Microservices. Who is interested?",
+            created_at=datetime.now(timezone.utc)
+        )
+
+        db.add_all([comm1, comm2, comm3, comm4, comm5, comm6, comm7, comm8, comm9, comm10])
+        db.flush()
+
+        print("Seeding Sample Support Tickets...")
+        ticket1 = SupportTicket(
+            user_id=alice.id,
+            category="Escrow & Payments",
+            subject="Question regarding escrow release timeline",
+            message="Hi Support team! When a paid tutoring session is completed, how long does the escrow release take to reflect in the teacher account?",
+            contact_email="alice@skillbridge.dev",
+            status="RESOLVED",
+            priority="NORMAL"
+        )
+        ticket2 = SupportTicket(
+            user_id=maya.id,
+            category="Privacy & Confidentiality",
+            subject="Verification that my company name is hidden from teachers",
+            message="I am preparing for Senior System Design rounds and want to ensure my current employer remains 100% confidential. Can you confirm the masking is active?",
+            contact_email="maya.learner@skillbridge.dev",
+            status="OPEN",
+            priority="NORMAL"
+        )
+        db.add_all([ticket1, ticket2])
         db.commit()
 
         print("Database successfully seeded with realistic SkillBridge demo data!")

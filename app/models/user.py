@@ -26,6 +26,13 @@ class User(Base):
     
     # 3. Specific option for person who wants to get TAUGHT / LEARN (confidential vs public)
     is_confidential_learner = Column(Boolean, default=False, nullable=False)
+
+    # 4. Granular personal detail visibility controls (phone, email, real name, company)
+    # Allows teachers & learners to specifically decide whether to show or hide their phone, email, or real identity
+    show_phone = Column(Boolean, default=False, nullable=False) # Hidden by default
+    show_email = Column(Boolean, default=False, nullable=False) # Hidden by default
+    show_real_name = Column(Boolean, default=True, nullable=False)
+    show_company = Column(Boolean, default=True, nullable=False)
     
     avatar_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -39,3 +46,8 @@ class User(Base):
     mentor_profile = relationship("CompanyMentorProfile", back_populates="user", uselist=False)
     asked_questions = relationship("DirectMentorQuestion", foreign_keys="DirectMentorQuestion.asker_user_id", back_populates="asker")
     received_questions = relationship("DirectMentorQuestion", foreign_keys="DirectMentorQuestion.mentor_user_id", back_populates="mentor")
+    
+    # Direct Chat & Community Lounge Relationships
+    sent_messages = relationship("ChatMessage", foreign_keys="ChatMessage.sender_id", back_populates="sender", cascade="all, delete-orphan")
+    received_messages = relationship("ChatMessage", foreign_keys="ChatMessage.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
+    community_messages = relationship("CommunityMessage", back_populates="sender", cascade="all, delete-orphan")

@@ -24,11 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   await loadMasterSkills();
   await checkAuthStatus();
-  loadTeacherCatalog();
-  loadBarterMatches();
-  loadQuestionBank();
-  loadCompanyMentors();
-  loadMentorQuestions();
 });
 
 // Navigation Handling
@@ -43,15 +38,55 @@ function setupNavigation() {
       const target = document.getElementById(tab.dataset.target);
       if (target) target.classList.add('active');
 
+      const titleEl = document.getElementById('topbar-current-section');
+      if (titleEl) {
+        const textSpan = tab.querySelector('.nav-item-text');
+        titleEl.innerText = textSpan ? textSpan.innerText : tab.innerText.trim();
+      }
+
+      // Close mobile drawer if open
+      const sidebar = document.getElementById('app-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (sidebar) sidebar.classList.remove('mobile-open');
+      if (backdrop) backdrop.classList.remove('active');
+
       // Refresh data when navigating
       if (tab.dataset.target === 'tab-catalog') loadTeacherCatalog();
       if (tab.dataset.target === 'tab-barter') loadBarterMatches();
       if (tab.dataset.target === 'tab-questions') loadQuestionBank();
       if (tab.dataset.target === 'tab-mentors') { loadCompanyMentors(); loadMentorQuestions(); }
       if (tab.dataset.target === 'tab-exchanges') loadMyExchanges();
+      if (tab.dataset.target === 'tab-chat') loadChatHub();
+      if (tab.dataset.target === 'tab-support') { loadSupportFAQs(); loadSupportTickets(); }
       if (tab.dataset.target === 'tab-profile') loadMyProfile();
     });
   });
+}
+
+function toggleSidebarMenu() {
+  const sidebar = document.getElementById('app-sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (window.innerWidth <= 900) {
+    if (sidebar) sidebar.classList.toggle('mobile-open');
+    if (backdrop) backdrop.classList.toggle('active');
+  } else {
+    if (sidebar) sidebar.classList.toggle('collapsed');
+  }
+}
+
+function toggleDemoPersonas() {
+  const container = document.getElementById('demo-personas-container');
+  const btn = document.getElementById('btn-toggle-personas');
+  if (!container) return;
+  const isHidden = container.style.display === 'none';
+  container.style.display = isHidden ? 'block' : 'none';
+  if (btn) btn.innerText = isHidden ? '🔼 Hide Personas' : '🔽 Show Personas';
+}
+
+function toggleTopbarPersona() {
+  const box = document.getElementById('topbar-persona-box');
+  if (!box) return;
+  box.style.display = (box.style.display === 'none') ? 'flex' : 'none';
 }
 
 // Master Skills Fetch
@@ -66,41 +101,177 @@ async function loadMasterSkills() {
 }
 
 function populateSkillSelects() {
-  const selects = ['filter-skill-select', 'req-offer-skill', 'req-want-skill', 'profile-skill-select'];
+  const selects = [
+    'filter-skill-select', 'req-offer-skill', 'req-want-skill',
+    'profile-skill-select', 'modal-teach-skill-id', 'modal-learn-skill-id'
+  ];
   selects.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const currentVal = el.value;
     el.innerHTML = id.includes('filter') ? '<option value="">All Skills</option>' : '<option value="">-- Select Skill --</option>';
     masterSkills.forEach(s => {
-      el.innerHTML += `<option value="${s.id}">${s.name} (${s.category})</option>`;
+      el.innerHTML += `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.category)})</option>`;
     });
     if (currentVal) el.value = currentVal;
   });
 }
 
-// Authentication & Persona Switching
+// ==================== AUTHENTICATION & LOGIN GATE ====================
 async function checkAuthStatus() {
+  const portal = document.getElementById('auth-portal');
+  const dash = document.getElementById('app-dashboard');
+
   if (!currentToken) {
-    // Auto-login as Alice by default for seamless instant demo!
-    await switchDemoPersona('alice');
+    if (portal) portal.style.display = 'flex';
+    if (dash) dash.style.display = 'none';
     return;
   }
+
   try {
     const res = await fetch(`${API_BASE}/auth/me`, {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
     if (res.ok) {
       currentUser = await res.json();
+      if (portal) portal.style.display = 'none';
+      if (dash) dash.style.display = 'flex';
       updateHeaderUserUI();
+      loadDashboardData();
     } else {
       localStorage.removeItem('skillbridge_token');
       currentToken = null;
-      await switchDemoPersona('alice');
+      currentUser = null;
+      if (portal) portal.style.display = 'flex';
+      if (dash) dash.style.display = 'none';
     }
   } catch (err) {
     console.error('Auth check error:', err);
+    if (portal) portal.style.display = 'flex';
+    if (dash) dash.style.display = 'none';
   }
+}
+
+function loadDashboardData() {
+  loadTeacherCatalog();
+  loadBarterMatches();
+  loadQuestionBank();
+  loadCompanyMentors();
+  loadMentorQuestions();
+  loadSupportFAQs();
+  loadSupportTickets();
+}
+
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('login-form');
+  const regForm = document.getElementById('register-form');
+  const btnLogin = document.getElementById('auth-tab-login-btn');
+  const btnReg = document.getElementById('auth-tab-register-btn');
+  const errBox = document.getElementById('auth-error-alert');
+  if (errBox) errBox.style.display = 'none';
+
+  if (tab === 'login') {
+    if (loginForm) loginForm.style.display = 'block';
+    if (regForm) regForm.style.display = 'none';
+    if (btnLogin) btnLogin.classList.add('active');
+    if (btnReg) btnReg.classList.remove('active');
+  } else {
+    if (loginForm) loginForm.style.display = 'none';
+    if (regForm) regForm.style.display = 'block';
+    if (btnLogin) btnLogin.classList.remove('active');
+    if (btnReg) btnReg.classList.add('active');
+  }
+}
+
+async function handleUserLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('auth-error-alert');
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentToken = data.access_token;
+      localStorage.setItem('skillbridge_token', currentToken);
+      showToast('Login successful! Welcome to SkillBridge.');
+      await checkAuthStatus();
+    } else {
+      if (errBox) {
+        errBox.innerText = data.detail || 'Invalid email or password.';
+        errBox.style.display = 'block';
+      }
+    }
+  } catch (err) {
+    if (errBox) {
+      errBox.innerText = 'Network error connecting to SkillBridge backend.';
+      errBox.style.display = 'block';
+    }
+  }
+}
+
+async function handleUserRegister(e) {
+  e.preventDefault();
+  const full_name = document.getElementById('reg-fullname').value.trim();
+  const display_name = document.getElementById('reg-displayname').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const phone = document.getElementById('reg-phone')?.value.trim() || null;
+  const company = document.getElementById('reg-company')?.value.trim() || null;
+
+  const is_confidential = document.getElementById('reg-conf-master')?.checked || false;
+  const is_confidential_teacher = document.getElementById('reg-conf-teacher')?.checked || false;
+  const is_confidential_learner = document.getElementById('reg-conf-learner')?.checked || false;
+
+  const errBox = document.getElementById('auth-error-alert');
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+        full_name,
+        display_name,
+        phone,
+        company,
+        is_confidential,
+        is_confidential_teacher,
+        is_confidential_learner,
+        show_phone: false,
+        show_email: false,
+        show_real_name: !is_confidential,
+        show_company: !is_confidential
+      })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      currentToken = data.access_token;
+      localStorage.setItem('skillbridge_token', currentToken);
+      showToast('Registration successful! Welcome to SkillBridge.');
+      await checkAuthStatus();
+    } else {
+      if (errBox) {
+        errBox.innerText = data.detail || 'Registration failed. Please check inputs.';
+        errBox.style.display = 'block';
+      }
+    }
+  } catch (err) {
+    if (errBox) {
+      errBox.innerText = 'Network error during registration.';
+      errBox.style.display = 'block';
+    }
+  }
+}
+
+async function quickLoginPersona(key) {
+  await switchDemoPersona(key);
 }
 
 async function switchDemoPersona(key) {
@@ -121,45 +292,84 @@ async function switchDemoPersona(key) {
         headers: { 'Authorization': `Bearer ${currentToken}` }
       });
       currentUser = await meRes.json();
-      updateHeaderUserUI();
-      showToast(`Switched active persona to ${currentUser.display_name}`);
       
-      // Refresh views
-      loadTeacherCatalog();
-      loadBarterMatches();
-      loadMyExchanges();
-      loadMyProfile();
+      const portal = document.getElementById('auth-portal');
+      const dash = document.getElementById('app-dashboard');
+      if (portal) portal.style.display = 'none';
+      if (dash) dash.style.display = 'flex';
+
+      updateHeaderUserUI();
+      showToast(`Logged in as ${currentUser.display_name}`);
+      loadDashboardData();
     }
   } catch (err) {
-    console.error('Error switching persona:', err);
+    console.error('Persona switch error:', err);
   }
+}
+
+function logoutUser() {
+  localStorage.removeItem('skillbridge_token');
+  currentToken = null;
+  currentUser = null;
+  showToast('Signed out of SkillBridge.');
+  checkAuthStatus();
 }
 
 function updateHeaderUserUI() {
   const container = document.getElementById('user-header-info');
+  const heroName = document.getElementById('hero-user-name');
+  if (heroName && currentUser) {
+    heroName.innerText = currentUser.display_name;
+  }
+
+  // Update left-hand sidebar user card
+  const sideName = document.getElementById('sidebar-user-name');
+  const sideEmail = document.getElementById('sidebar-user-email');
+  const sideAvatar = document.getElementById('sidebar-user-avatar');
+  if (sideName && currentUser) sideName.innerText = currentUser.display_name;
+  if (sideEmail && currentUser) {
+    sideEmail.innerText = currentUser.is_confidential ? '🔒 Identity Masked' : currentUser.email;
+  }
+  if (sideAvatar && currentUser) {
+    sideAvatar.innerText = currentUser.is_confidential ? '🔒' : (currentUser.display_name.charAt(0).toUpperCase() || 'U');
+  }
+
+  // Synchronize persona switcher dropdown
+  const personaSelect = document.getElementById('topbar-persona-select');
+  if (personaSelect && currentUser) {
+    for (const [key, demo] of Object.entries(DEMO_USERS)) {
+      if (demo.email.toLowerCase() === currentUser.email.toLowerCase()) {
+        personaSelect.value = key;
+        break;
+      }
+    }
+  }
+
   if (!container || !currentUser) return;
 
   let badges = '';
   if (currentUser.is_confidential) {
-    badges = `<span class="confidential-pill active" title="Your overall identity is confidential. Only display name and abilities are public.">🔒 Master Confidential: ON</span>`;
+    badges = '<span class="confidential-pill active" title="Master Confidentiality Active">🔒 100% Anonymous</span>';
   } else {
     const tBadge = currentUser.is_confidential_teacher
-      ? `<span class="confidential-pill active" title="Teacher profile confidential: only alias and what you teach visible">🔒 Teacher: Confidential</span>`
+      ? `<span class="confidential-pill active" title="Teacher profile confidential">🔒 Teacher: Hidden</span>`
       : `<span class="confidential-pill inactive" title="Teacher profile public">👁️ Teacher: Public</span>`;
-    
     const lBadge = currentUser.is_confidential_learner
-      ? `<span class="confidential-pill active" title="Learner profile confidential: identity hidden when seeking to learn">🔒 Learner: Confidential</span>`
+      ? `<span class="confidential-pill active" title="Learner profile confidential">🔒 Learner: Hidden</span>`
       : `<span class="confidential-pill inactive" title="Learner profile public">👁️ Learner: Public</span>`;
     badges = `${tBadge} ${lBadge}`;
   }
 
+  const avatarChar = currentUser.is_confidential ? '🔒' : (currentUser.display_name.charAt(0).toUpperCase() || 'U');
   container.innerHTML = `
-    <div style="text-align: right; line-height: 1.2;">
-      <div style="font-weight: 700; font-size: 0.95rem;">${currentUser.display_name}</div>
-      <div style="font-size: 0.75rem; color: #94a3b8;">${currentUser.email}</div>
-    </div>
-    <div style="display: flex; gap: 0.35rem;">
-      ${badges}
+    <div style="display: flex; align-items: center; gap: 0.45rem;">
+      <div style="display: flex; align-items: center; gap: 0.35rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 3px 8px; border-radius: 9999px;">
+        <span class="chat-avatar" style="width: 20px; height: 20px; font-size: 0.7rem; margin: 0; line-height: 20px;">${avatarChar}</span>
+        <span style="font-weight: 700; font-size: 0.8rem; color: #0f172a;">${escapeHtml(currentUser.display_name)}</span>
+      </div>
+      <div style="display: flex; gap: 0.25rem;">
+        ${badges}
+      </div>
     </div>
   `;
 }
@@ -180,7 +390,7 @@ function setCatalogType(type) {
   loadTeacherCatalog();
 }
 
-// 1. TEACHER & LEARNER CATALOG
+// ==================== 1. TEACHER & LEARNER CATALOG ====================
 async function loadTeacherCatalog() {
   const grid = document.getElementById('catalog-grid');
   if (!grid) return;
@@ -233,11 +443,11 @@ async function loadTeacherCatalog() {
           <div>
             <div class="card-header">
               <div class="author-info">
-                <h4>${item.display_name}</h4>
+                <h4>${escapeHtml(item.display_name)}</h4>
                 ${privacyBadge}
               </div>
               <span style="font-size: 0.8rem; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">
-                ${item.proficiency_level}
+                ${escapeHtml(item.proficiency_level)}
               </span>
             </div>
             
@@ -245,22 +455,35 @@ async function loadTeacherCatalog() {
               <div style="font-size: 0.75rem; color: #4338ca; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
                 ${isTeacher ? 'Offering to Teach' : 'Wants to Learn'}
               </div>
-              <h3>${item.skill_name}</h3>
-              <p style="font-size: 0.8rem; color: #6366f1; font-weight: 600; margin-bottom: 0.5rem;">${item.category}</p>
+              <h3>${escapeHtml(item.skill_name)}</h3>
+              <p style="font-size: 0.8rem; color: #6366f1; font-weight: 600; margin-bottom: 0.5rem;">${escapeHtml(item.category)}</p>
               
               ${isTeacher ? `
                 <div class="card-desc">
-                  <strong>Good at Explaining:</strong> ${item.explanation_style || 'Explains concepts clearly with real-world examples.'}
+                  <strong>Good at Explaining:</strong> ${escapeHtml(item.explanation_style || 'Explains concepts clearly with real-world examples.')}
                 </div>
                 <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem;">
                   ⏳ <strong>Experience:</strong> ${item.years_of_experience} yrs
                 </div>
               ` : `
                 <div class="card-desc">
-                  <strong>Learning Objective / Goal:</strong> ${item.learning_goal || item.explanation_style || 'Seeking peer guidance and conceptual explanations.'}
+                  <strong>Learning Objective / Goal:</strong> ${escapeHtml(item.learning_goal || item.explanation_style || 'Seeking peer guidance and conceptual explanations.')}
                 </div>
               `}
               <div>${modeBadge}</div>
+
+              <!-- Contact & Identity Visibility -->
+              ${item.is_confidential ? `
+                <div style="font-size: 0.78rem; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 4px; margin-top: 0.5rem;">
+                  🔒 <em>Contact & personal details protected by user choice</em>
+                </div>
+              ` : `
+                <div style="font-size: 0.78rem; color: #475569; background: #f8fafc; padding: 4px 8px; border-radius: 4px; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 2px;">
+                  ${item.show_phone && item.phone ? `<div>📞 <strong>Phone:</strong> <a href="tel:${item.phone}" style="color: #4f46e5; font-weight: 600; text-decoration: none;">${escapeHtml(item.phone)}</a></div>` : ''}
+                  ${item.show_email && item.email ? `<div>✉️ <strong>Email:</strong> <a href="mailto:${item.email}" style="color: #4f46e5; font-weight: 600; text-decoration: none;">${escapeHtml(item.email)}</a></div>` : ''}
+                  ${!item.show_phone && !item.show_email ? `<div>🔒 <em>Phone & email kept hidden by ${isTeacher ? 'teacher' : 'learner'}</em></div>` : ''}
+                </div>
+              `}
             </div>
           </div>
 
@@ -273,9 +496,14 @@ async function loadTeacherCatalog() {
             </div>
             ${isMe 
               ? `<span style="font-size: 0.8rem; color: #64748b; font-weight: 600;">(Your Listing)</span>` 
-              : `<button class="btn btn-primary btn-sm" onclick="openExchangeModal(${item.user_id}, '${escapeHtml(item.display_name)}', '${escapeHtml(item.skill_name)}', ${item.hourly_rate}, '${item.exchange_preference}', '${item.skill_type}')">
-                  ${isTeacher ? 'Request Tutoring / Barter' : 'Offer to Teach / Barter'}
-                </button>`
+              : `<div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="openChatWithUser(${item.user_id}, '${escapeHtml(item.display_name)}')">
+                    💬 Chat
+                  </button>
+                  <button class="btn btn-primary btn-sm" onclick="openExchangeModal(${item.user_id}, '${escapeHtml(item.display_name)}', '${escapeHtml(item.skill_name)}', ${item.hourly_rate}, '${item.exchange_preference}', '${item.skill_type}')">
+                    ${isTeacher ? 'Request Tutoring' : 'Offer to Teach'}
+                  </button>
+                </div>`
             }
           </div>
         </div>
@@ -286,13 +514,13 @@ async function loadTeacherCatalog() {
   }
 }
 
-// 2. SMART BARTER MATCHER
+// ==================== 2. SMART 2-WAY BARTER MATCHER ====================
 async function loadBarterMatches() {
   const container = document.getElementById('barter-matches-container');
   if (!container) return;
 
   if (!currentToken) {
-    container.innerHTML = '<div style="padding: 2rem; color: #64748b;">Log in to discover 2-way barter matches.</div>';
+    container.innerHTML = '<div style="padding: 2rem; color: #64748b;">Please log in to see your 2-way barter matches.</div>';
     return;
   }
 
@@ -301,16 +529,16 @@ async function loadBarterMatches() {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
     const data = await res.json();
-    
+
     if (!data.matches || !data.matches.length) {
       container.innerHTML = `
         <div style="background: #fff; padding: 2rem; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center;">
-          <h3 style="color: #0f172a; margin-bottom: 0.5rem;">No Direct 2-Way Barter Matches Right Now</h3>
-          <p style="color: #64748b; max-width: 600px; margin: 0 auto 1.5rem;">
+          <h3 style="color: #0f172a; margin-bottom: 0.5rem;">No 2-Way Barter Matches Yet</h3>
+          <p style="color: #64748b; max-width: 600px; margin: 0 auto 1.5rem auto;">
             A 2-way barter match occurs when another person teaches what you want to learn AND wants to learn what you teach (for instance, <strong>Alice knows C++ and wants Java</strong>, while <strong>Bob knows Java and wants C++</strong>!).
           </p>
-          <button class="btn btn-primary" onclick="document.querySelector('[data-target=\\'tab-profile\\']').click()">
-            Manage Your Teach & Learn Skills
+          <button class="btn btn-primary" onclick="openAddTeacherModal()">
+            Add a Skill You Can Teach
           </button>
         </div>
       `;
@@ -330,20 +558,23 @@ async function loadBarterMatches() {
         <div class="match-swap-box">
           <div style="text-align: center;">
             <div style="font-size: 0.8rem; color: #64748b;">YOU TEACH</div>
-            <div style="font-size: 1.1rem; color: #065f46; font-weight: 700;">${m.peer_wants_to_learn}</div>
+            <div style="font-size: 1.1rem; color: #065f46; font-weight: 700;">${escapeHtml(m.peer_wants_to_learn)}</div>
           </div>
           <div style="font-size: 1.5rem; color: #4f46e5;">⇄</div>
           <div style="text-align: center;">
-            <div style="font-size: 0.8rem; color: #64748b;">${m.peer_display_name} TEACHES YOU</div>
-            <div style="font-size: 1.1rem; color: #1e40af; font-weight: 700;">${m.peer_teaches}</div>
+            <div style="font-size: 0.8rem; color: #64748b;">${escapeHtml(m.peer_display_name)} TEACHES YOU</div>
+            <div style="font-size: 1.1rem; color: #1e40af; font-weight: 700;">${escapeHtml(m.peer_teaches)}</div>
           </div>
         </div>
 
         <div style="font-size: 0.85rem; color: #475569; margin-bottom: 1rem;">
-          <strong>Peer Explanation Style:</strong> ${m.peer_explanation_style || 'Direct code walkthroughs and diagrams.'}
+          <strong>Peer Explanation Style:</strong> ${escapeHtml(m.peer_explanation_style || 'Direct code walkthroughs and diagrams.')}
         </div>
 
-        <div style="display: flex; justify-content: flex-end;">
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="openChatWithUser(${m.peer_user_id}, '${escapeHtml(m.peer_display_name)}')">
+            💬 Chat with ${escapeHtml(m.peer_display_name)}
+          </button>
           <button class="btn btn-primary" onclick="openBarterRequestModal(${m.peer_user_id}, '${escapeHtml(m.peer_display_name)}', '${escapeHtml(m.peer_wants_to_learn)}', '${escapeHtml(m.peer_teaches)}')">
             Initiate $0 Skill Barter Swap
           </button>
@@ -356,7 +587,7 @@ async function loadBarterMatches() {
   }
 }
 
-// 3. COMPANY INTERVIEW & TRAINING QUESTION BANK
+// ==================== 3. COMPANY INTERVIEW QUESTION BANK ====================
 async function loadQuestionBank() {
   const container = document.getElementById('questions-list-container');
   if (!container) return;
@@ -369,22 +600,23 @@ async function loadQuestionBank() {
   let url = `${API_BASE}/questions?`;
   if (company) url += `company=${encodeURIComponent(company)}&`;
   if (difficulty) url += `difficulty=${encodeURIComponent(difficulty)}&`;
-  if (search) url += `search=${encodeURIComponent(search)}&`;
+  if (search) url += `keyword=${encodeURIComponent(search)}&`;
 
   try {
     const res = await fetch(url);
     const questions = await res.json();
+
     if (!questions.length) {
-      container.innerHTML = '<div style="padding: 2rem; text-align: center; color: #64748b;">No interview questions found. Be the first to contribute one!</div>';
+      container.innerHTML = '<div style="padding: 2rem; text-align: center; color: #64748b;">No interview questions match your filter.</div>';
       return;
     }
 
     container.innerHTML = questions.map(q => `
       <div class="question-card" id="q-card-${q.id}">
         <div class="question-meta">
-          <span class="company-tag">🏢 ${q.company_name}</span>
-          <span style="font-size: 0.8rem; font-weight: 600; color: #475569;">${q.role}</span>
-          <span style="font-size: 0.8rem; color: #64748b;">• ${q.round_type}</span>
+          <span class="company-tag">🏢 ${escapeHtml(q.company_name)}</span>
+          <span style="font-size: 0.8rem; font-weight: 600; color: #475569;">${escapeHtml(q.role)}</span>
+          <span style="font-size: 0.8rem; color: #64748b;">• ${escapeHtml(q.round_type)}</span>
           <span class="difficulty-tag ${q.difficulty}" style="font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
             ${q.difficulty}
           </span>
@@ -395,7 +627,7 @@ async function loadQuestionBank() {
         </h3>
 
         ${q.tags ? `<div style="margin-bottom: 0.75rem;">
-          ${q.tags.split(',').map(t => `<span style="display: inline-block; background: #eef2ff; color: #4338ca; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; margin-right: 4px;">#${t.trim()}</span>`).join('')}
+          ${q.tags.split(',').map(t => `<span style="display: inline-block; background: #eef2ff; color: #4338ca; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; margin-right: 4px;">#${escapeHtml(t.trim())}</span>`).join('')}
         </div>` : ''}
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
@@ -408,7 +640,7 @@ async function loadQuestionBank() {
               👍 Upvote (<span id="upvote-count-${q.id}">${q.upvotes_count}</span>)
             </button>
             <span style="font-size: 0.75rem; color: #94a3b8;">
-              Contributed by: ${q.author ? q.author.display_name : 'Anonymous'}
+              Contributed by: ${q.author ? escapeHtml(q.author.display_name) : 'Anonymous'}
             </span>
           </div>
         </div>
@@ -450,19 +682,14 @@ async function upvoteQuestion(qid) {
   }
 }
 
-// 4. COMPANY MENTORS & DIRECT Q&A
+// ==================== 4. COMPANY MENTORS & DIRECT Q&A ====================
 async function loadCompanyMentors() {
   const container = document.getElementById('company-mentors-grid');
   if (!container) return;
-  container.innerHTML = '<div style="padding: 2rem; color: #64748b;">Loading company mentors...</div>';
 
   try {
     const res = await fetch(`${API_BASE}/company-mentors`);
     const mentors = await res.json();
-    if (!mentors.length) {
-      container.innerHTML = '<div style="padding: 2rem; color: #64748b;">No company mentors currently listed.</div>';
-      return;
-    }
 
     container.innerHTML = mentors.map(m => {
       const isMe = currentUser && currentUser.id === m.user_id;
@@ -471,23 +698,23 @@ async function loadCompanyMentors() {
           <div>
             <div class="card-header">
               <div class="author-info">
-                <h4>${m.user.display_name}</h4>
-                <span class="author-company">🏢 ${m.company_name}</span>
+                <h4>${escapeHtml(m.user.display_name)}</h4>
+                <span class="author-company">🏢 ${escapeHtml(m.company_name)}</span>
               </div>
               ${m.can_give_referral ? `<span class="badge-tag badge-barter">🎯 Can Refer</span>` : ''}
             </div>
 
             <div class="card-body">
               <div style="font-weight: 600; font-size: 0.95rem; color: #1e293b; margin-bottom: 0.25rem;">
-                ${m.job_title}
+                ${escapeHtml(m.job_title)}
               </div>
               <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem;">
-                ${m.department ? `${m.department} • ` : ''}${m.years_of_experience} yrs in company
+                ${m.department ? `${escapeHtml(m.department)} • ` : ''}${m.years_of_experience} yrs in company
               </div>
 
               <div class="card-desc">
                 <strong>Topics Open for Q&A:</strong><br>
-                ${m.topics_open_for_questions || 'Interviews, system design, corporate training, career guidance.'}
+                ${escapeHtml(m.topics_open_for_questions || 'Interviews, system design, corporate training, career guidance.')}
               </div>
             </div>
           </div>
@@ -498,9 +725,14 @@ async function loadCompanyMentors() {
             </div>
             ${isMe 
               ? `<span style="font-size: 0.8rem; color: #64748b;">(Your Profile)</span>`
-              : `<button class="btn btn-primary btn-sm" onclick="openAskMentorModal(${m.user_id}, '${escapeHtml(m.user.display_name)}', '${escapeHtml(m.company_name)}')">
-                  Ask Direct Question
-                </button>`
+              : `<div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="openChatWithUser(${m.user_id}, '${escapeHtml(m.user.display_name)}')">
+                    💬 Chat
+                  </button>
+                  <button class="btn btn-primary btn-sm" onclick="openAskMentorModal(${m.user_id}, '${escapeHtml(m.user.display_name)}', '${escapeHtml(m.company_name)}')">
+                    Ask Direct Question
+                  </button>
+                </div>`
             }
           </div>
         </div>
@@ -519,27 +751,26 @@ async function loadMentorQuestions() {
   try {
     const headers = currentToken ? { 'Authorization': `Bearer ${currentToken}` } : {};
     const res = await fetch(`${API_BASE}/company-mentors/questions`, { headers });
-    const questions = await res.json();
+    const qa = await res.json();
 
-    if (!questions.length) {
-      container.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #64748b;">No direct Q&A threads yet. Be the first to ask a company mentor!</div>';
+    if (!qa.length) {
+      container.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #64748b;">No questions posted yet. Be the first to ask!</div>';
       return;
     }
 
-    container.innerHTML = questions.map(q => {
-      const isMentor = currentUser && currentUser.id === q.mentor_user_id;
-      const isAnswered = q.status === 'ANSWERED' && q.mentor_response;
+    container.innerHTML = qa.map(q => {
+      const isAnswered = (q.status === 'ANSWERED');
+      const isMentor = currentUser && (currentUser.id === q.mentor_user_id);
 
       return `
         <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
-            <div>
-              <span style="font-size: 0.8rem; color: #64748b;">Question for:</span>
-              <strong style="color: #4338ca;">${q.mentor.display_name}</strong>
-              <span style="font-size: 0.75rem; color: #94a3b8;">• Asked by ${q.asker.display_name}</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="font-size: 0.85rem; color: #64748b;">
+              Asked by <strong>${q.asker ? escapeHtml(q.asker.display_name) : 'Anonymous'}</strong> to 
+              <strong style="color: #4338ca;">${q.mentor ? escapeHtml(q.mentor.display_name) : 'Mentor'}</strong>
             </div>
-            <span class="badge-tag ${isAnswered ? 'badge-barter' : 'badge-free'}">
-              ${isAnswered ? '✓ Answered by Mentor' : '⏳ Waiting for Reply'}
+            <span class="badge-tag ${isAnswered ? 'badge-barter' : 'badge-paid'}">
+              ${isAnswered ? '✅ Answered by Professional' : '⏳ Pending Response'}
             </span>
           </div>
 
@@ -596,7 +827,7 @@ async function submitMentorReply(qid) {
   }
 }
 
-// 5. MY EXCHANGES & SESSIONS
+// ==================== 5. MY EXCHANGES & SESSIONS ====================
 async function loadMyExchanges() {
   const container = document.getElementById('my-exchanges-container');
   if (!container) return;
@@ -623,7 +854,7 @@ async function loadMyExchanges() {
     }
 
     container.innerHTML = exchanges.map(ex => {
-      const isSender = currentUser.id === ex.sender_id;
+      const isSender = currentUser && currentUser.id === ex.sender_id;
       const otherUser = isSender ? ex.receiver : ex.sender;
       const roleText = isSender ? 'Sent to' : 'Received from';
 
@@ -639,24 +870,53 @@ async function loadMyExchanges() {
           <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
             <div>
               <span style="font-size: 0.8rem; color: #64748b;">${roleText}:</span>
-              <strong style="color: #1e293b; font-size: 1.05rem;">${otherUser.display_name}</strong>
+              <strong style="color: #1e293b; font-size: 1.05rem;">${escapeHtml(otherUser.display_name)}</strong>
               ${otherUser.is_confidential ? `<span class="confidential-pill active" style="margin-left: 4px;">🔒 Confidential</span>` : ''}
               <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Type: ${ex.exchange_type}</div>
             </div>
             <div>${statusBadge}</div>
           </div>
 
-          <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; margin: 0.75rem 0; font-size: 0.9rem;">
+          <div style="margin: 0.75rem 0; font-size: 0.9rem; color: #475569;">
             ${ex.exchange_type === 'BARTER' ? `
-              <div><strong>Barter Swap:</strong> ${ex.sender_offered_skill ? ex.sender_offered_skill.name : 'Skill'} ⇄ ${ex.receiver_requested_skill ? ex.receiver_requested_skill.name : 'Skill'}</div>
+              <div><strong>Mutual Barter Swap:</strong> ${ex.sender_offered_skill ? ex.sender_offered_skill.name : 'Offered'} ⇄ ${ex.receiver_requested_skill ? ex.receiver_requested_skill.name : 'Requested'}</div>
             ` : `
               <div><strong>Tutoring:</strong> Learning ${ex.receiver_requested_skill ? ex.receiver_requested_skill.name : 'Skill'} • <strong>Fee:</strong> $${ex.monetary_amount}</div>
               <div><strong>Payment Escrow Status:</strong> <span style="font-weight: 600; color: #4338ca;">${ex.payment_status}</span></div>
             `}
             ${ex.session_details ? `<div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Details: ${escapeHtml(ex.session_details)}</div>` : ''}
+            ${(ex.status === 'ACCEPTED' || ex.status === 'IN_PROGRESS') ? `
+              <div style="margin-top: 0.75rem; padding: 0.85rem 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.85rem; color: #166534;">
+                <div style="font-weight: 700; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 6px;">
+                  🔒 Confidential Session Classroom Ready
+                </div>
+                <div style="margin-bottom: 0.6rem; color: #15803d;">Identity is protected. Teach and learn via voice, IDE screen-sharing, collaborative code sandboxes, and in-platform chat without exposing phone numbers, emails, or real identities.</div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <a href="https://meet.jit.si/skillbridge-session-${ex.id}-${ex.sender_id}x${ex.receiver_id}#config.startWithVideoMuted=true&userInfo.displayName=%22${encodeURIComponent(currentUser ? currentUser.display_name : 'SkillBridge_Member')}%22" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="text-decoration: none; font-size: 0.8rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">
+                    🎥 Launch Virtual Classroom (Voice & Screen)
+                  </a>
+                  <a href="https://codeshare.io/new" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="text-decoration: none; font-size: 0.8rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">
+                    💻 Codeshare Live Sandbox
+                  </a>
+                  <a href="https://excalidraw.com" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" style="text-decoration: none; font-size: 0.8rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">
+                    📐 Architecture Whiteboard
+                  </a>
+                </div>
+              </div>
+            ` : ''}
           </div>
 
-          <div style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap;">
+          <div style="display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-secondary btn-sm" onclick="openChatWithUser(${otherUser.id}, '${escapeHtml(otherUser.display_name)}')">
+              💬 In-Platform Chat
+            </button>
+
+            ${(ex.status === 'ACCEPTED' || ex.status === 'IN_PROGRESS') ? `
+              <a href="https://meet.jit.si/skillbridge-session-${ex.id}-${ex.sender_id}x${ex.receiver_id}#config.startWithVideoMuted=true&userInfo.displayName=%22${encodeURIComponent(currentUser ? currentUser.display_name : 'SkillBridge_Member')}%22" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                🎥 Launch Confidential Classroom (Voice & Screen)
+              </a>
+            ` : ''}
+
             ${(!isSender && ex.status === 'PENDING') ? `
               <button class="btn btn-success btn-sm" onclick="updateExchangeStatus(${ex.id}, 'ACCEPTED')">Accept</button>
               <button class="btn btn-secondary btn-sm" onclick="updateExchangeStatus(${ex.id}, 'REJECTED')">Decline</button>
@@ -695,10 +955,10 @@ async function loadMyExchanges() {
   }
 }
 
-async function updateExchangeStatus(id, newStatus) {
+async function updateExchangeStatus(exId, newStatus) {
   try {
-    const res = await fetch(`${API_BASE}/exchanges/${id}/status`, {
-      method: 'PATCH',
+    const res = await fetch(`${API_BASE}/exchanges/${exId}/status`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentToken}`
@@ -708,24 +968,28 @@ async function updateExchangeStatus(id, newStatus) {
     if (res.ok) {
       showToast(`Exchange marked as ${newStatus}`);
       loadMyExchanges();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to update status', 'error');
     }
   } catch (err) {
-    console.error('Update status error:', err);
+    console.error('Status error:', err);
+    showToast('Network error updating exchange status', 'error');
   }
 }
 
-async function triggerPaymentAction(id, action) {
+async function triggerPaymentAction(exId, action) {
   try {
-    const res = await fetch(`${API_BASE}/exchanges/${id}/payment`, {
+    const res = await fetch(`${API_BASE}/exchanges/${exId}/payment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentToken}`
       },
-      body: JSON.stringify({ action: action, payment_method: 'WALLET_ESCROW' })
+      body: JSON.stringify({ action })
     });
     if (res.ok) {
-      showToast(`Payment action '${action}' completed successfully!`);
+      showToast(action === 'PAY_ESCROW' ? 'Payment securely deposited into Escrow!' : 'Funds released to teacher!');
       loadMyExchanges();
     }
   } catch (err) {
@@ -733,11 +997,845 @@ async function triggerPaymentAction(id, action) {
   }
 }
 
-// 6. MY PROFILE & PRIVACY CONTROLS
+// ==================== 6. SKILLBRIDGE CHATTING PLACE & COMMUNITY LOUNGE ====================
+let currentChatMode = 'community';
+let currentCommunityChannel = 'general';
+let allCommunityChannels = [];
+let allDirectoryUsers = [];
+
+let currentChatUserId = null;
+let currentChatUserName = '';
+let allConversations = [];
+let chatPollingTimer = null;
+
+async function loadChatHub() {
+  if (currentChatMode === 'community') {
+    await loadCommunityChannels();
+    await loadCommunityMessages(currentCommunityChannel);
+  } else {
+    await loadConversations();
+  }
+  startUnifiedChatPolling();
+}
+
+function setChatMode(mode) {
+  currentChatMode = mode;
+  const btnComm = document.getElementById('btn-chat-community');
+  const btnDir = document.getElementById('btn-chat-direct');
+  const viewComm = document.getElementById('chat-community-view');
+  const viewDir = document.getElementById('chat-direct-view');
+
+  if (mode === 'community') {
+    if (btnComm) btnComm.className = 'btn btn-primary';
+    if (btnDir) btnDir.className = 'btn btn-outline';
+    if (viewComm) viewComm.style.display = 'grid';
+    if (viewDir) viewDir.style.display = 'none';
+    loadCommunityChannels();
+    loadCommunityMessages(currentCommunityChannel);
+  } else {
+    if (btnComm) btnComm.className = 'btn btn-outline';
+    if (btnDir) btnDir.className = 'btn btn-primary';
+    if (viewComm) viewComm.style.display = 'none';
+    if (viewDir) viewDir.style.display = 'grid';
+    loadConversations();
+  }
+}
+
+async function loadCommunityChannels() {
+  const container = document.getElementById('community-channels-list');
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/chat/community/channels`);
+    if (!res.ok) throw new Error('Failed to fetch channels');
+    allCommunityChannels = await res.json();
+
+    container.innerHTML = allCommunityChannels.map(ch => {
+      const isActive = (ch.id === currentCommunityChannel);
+      return `
+        <div class="channel-item ${isActive ? 'active' : ''}" onclick="selectCommunityChannel('${ch.id}', '${escapeHtml(ch.title)}', '${escapeHtml(ch.description)}')">
+          <div>
+            <div style="font-size: 0.9rem; color: #0f172a; font-weight: ${isActive ? '700' : '600'};">${escapeHtml(ch.name)}</div>
+            <div style="font-size: 0.72rem; color: #64748b;">${escapeHtml(ch.title)}</div>
+          </div>
+          <span style="font-size: 0.75rem; background: #f1f5f9; padding: 1px 7px; border-radius: 10px; color: #475569;">
+            ${ch.message_count}
+          </span>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Error loading channels:', err);
+  }
+}
+
+async function selectCommunityChannel(channelId, title, desc) {
+  currentCommunityChannel = channelId;
+  const titleEl = document.getElementById('comm-active-title');
+  const descEl = document.getElementById('comm-active-desc');
+  const inputEl = document.getElementById('community-chat-input');
+
+  if (titleEl && title) titleEl.innerText = title;
+  if (descEl && desc) descEl.innerText = desc;
+  if (inputEl) inputEl.placeholder = `Chat with everyone in #${channelId}... (Press Enter to send)`;
+
+  loadCommunityChannels();
+  await loadCommunityMessages(channelId);
+}
+
+async function loadCommunityMessages(channelId, silent = false) {
+  const container = document.getElementById('community-messages-container');
+  if (!container) return;
+
+  if (!silent && (!container.children.length || container.innerHTML.includes('Loading'))) {
+    container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 1.5rem;">Loading community lounge...</div>';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/chat/community/messages?channel=${channelId}`);
+    if (!res.ok) throw new Error('Failed to fetch messages');
+    const messages = await res.json();
+
+    if (!messages.length) {
+      container.innerHTML = `
+        <div class="chat-empty-state" style="padding: 2.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💬</div>
+          <div style="font-weight: 600; color: #475569;">Welcome to #${channelId}!</div>
+          <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 4px;">Be the first person to post a message in this channel!</div>
+        </div>
+      `;
+      return;
+    }
+
+    const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight < 140);
+
+    container.innerHTML = messages.map(m => {
+      const u = m.sender;
+      const initial = (u.display_name || '?').charAt(0).toUpperCase();
+      const isConf = Boolean(u.is_confidential);
+      const isMe = (currentUser && currentUser.id === m.sender_id);
+      const timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let badges = '';
+      if (u.company) {
+        badges += `<span style="font-size: 0.7rem; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-weight: 600;">🏢 ${escapeHtml(u.company)}</span>`;
+      }
+      if (isConf) {
+        badges += `<span style="font-size: 0.7rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 4px;">🔒 Confidential</span>`;
+      }
+
+      return `
+        <div class="community-msg-row">
+          <div class="chat-avatar ${isConf ? 'confidential' : ''}">${isConf ? '🔒' : initial}</div>
+          <div class="community-msg-body">
+            <div class="community-msg-header">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="community-author-name">${escapeHtml(u.display_name)}</span>
+                ${badges}
+                <span style="font-size: 0.7rem; color: #94a3b8;">${timeStr}</span>
+              </div>
+              ${!isMe ? `
+                <button class="community-dm-btn" onclick="openChatWithUser(${m.sender_id}, '${escapeHtml(u.display_name)}')">
+                  💬 Direct Message
+                </button>
+              ` : '<span style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;">(You)</span>'}
+            </div>
+            <div style="font-size: 0.92rem; color: #1e293b; line-height: 1.45; word-break: break-word;">
+              ${escapeHtml(m.content)}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (!silent || isNearBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  } catch (err) {
+    console.error('Error loading community messages:', err);
+  }
+}
+
+async function handleSendCommunityMessage(e) {
+  e.preventDefault();
+  const input = document.getElementById('community-chat-input');
+  if (!input) return;
+
+  const content = input.value.trim();
+  if (!content) return;
+
+  if (!currentToken) {
+    showToast('Please log in to chat with the community', 'error');
+    return;
+  }
+
+  input.value = '';
+  input.focus();
+
+  try {
+    const res = await fetch(`${API_BASE}/chat/community/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({
+        channel: currentCommunityChannel,
+        content: content
+      })
+    });
+
+    if (res.ok) {
+      await loadCommunityMessages(currentCommunityChannel);
+      await loadCommunityChannels();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Could not post message', 'error');
+    }
+  } catch (err) {
+    console.error('Community send error:', err);
+    showToast('Network error posting message', 'error');
+  }
+}
+
+// ----------------- DIRECT 1-ON-1 MESSAGES -----------------
+async function loadConversations() {
+  const listEl = document.getElementById('chat-conv-list');
+  if (!listEl) return;
+  if (!currentToken) {
+    listEl.innerHTML = '<div class="chat-empty-state" style="padding: 1.5rem;">Please log in to view messages.</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/chat/conversations`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) throw new Error('Failed to load conversations');
+    allConversations = await res.json();
+
+    renderConversationList(allConversations);
+    updateChatUnreadBadge();
+  } catch (err) {
+    console.error('Error loading conversations:', err);
+    listEl.innerHTML = '<div style="color: #ef4444; padding: 1.5rem;">Error loading conversations.</div>';
+  }
+}
+
+function updateChatUnreadBadge() {
+  const badge = document.getElementById('chat-unread-badge');
+  if (!badge) return;
+  const totalUnread = allConversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  if (totalUnread > 0) {
+    badge.innerText = totalUnread;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderConversationList(convs) {
+  const listEl = document.getElementById('chat-conv-list');
+  if (!listEl) return;
+
+  if (!convs.length) {
+    listEl.innerHTML = `
+      <div class="chat-empty-state" style="padding: 1.5rem;">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💬</div>
+        <div style="font-weight: 600; font-size: 0.9rem; color: #475569;">No direct messages yet</div>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">Click "+ New Chat" to pick anyone on SkillBridge!</p>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = convs.map(c => {
+    const u = c.other_user;
+    const isActive = (currentChatUserId === u.id);
+    const initial = (u.display_name || '?').charAt(0).toUpperCase();
+    const isConf = Boolean(u.is_confidential);
+    const timeStr = formatChatTime(c.last_message_time);
+
+    return `
+      <div class="chat-conversation-item ${isActive ? 'active' : ''}" onclick="selectConversation(${u.id}, '${escapeHtml(u.display_name)}')">
+        <div class="chat-avatar ${isConf ? 'confidential' : ''}">${isConf ? '🔒' : initial}</div>
+        <div class="chat-conv-info">
+          <div class="chat-conv-title">
+            <span class="chat-conv-name">${escapeHtml(u.display_name)}</span>
+            <span class="chat-conv-time">${timeStr}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="chat-conv-snippet">${escapeHtml(c.last_message || '')}</span>
+            ${c.unread_count > 0 ? `<span class="chat-unread-count">${c.unread_count}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterConversations() {
+  const term = document.getElementById('chat-search')?.value.toLowerCase().trim() || '';
+  if (!term) {
+    renderConversationList(allConversations);
+    return;
+  }
+  const filtered = allConversations.filter(c => {
+    const name = (c.other_user.display_name || '').toLowerCase();
+    const msg = (c.last_message || '').toLowerCase();
+    return name.includes(term) || msg.includes(term);
+  });
+  renderConversationList(filtered);
+}
+
+function formatChatTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else if (diffDays === 1) {
+    return 'Yesterday';
+  } else if (diffDays < 7) {
+    return d.toLocaleDateString([], { weekday: 'short' });
+  }
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+async function selectConversation(userId, displayName) {
+  currentChatUserId = userId;
+  currentChatUserName = displayName;
+
+  setChatMode('direct');
+
+  document.querySelectorAll('.chat-conversation-item').forEach(el => el.classList.remove('active'));
+  
+  const placeholder = document.getElementById('chat-placeholder');
+  const activeContainer = document.getElementById('chat-active-container');
+  if (placeholder) placeholder.style.display = 'none';
+  if (activeContainer) activeContainer.style.display = 'flex';
+
+  const nameEl = document.getElementById('chat-active-name');
+  const avatarEl = document.getElementById('chat-active-avatar');
+  const subEl = document.getElementById('chat-active-subtitle');
+  if (nameEl) nameEl.innerText = displayName;
+  if (avatarEl) avatarEl.innerText = displayName.charAt(0).toUpperCase();
+  if (subEl) subEl.innerText = 'Connected peer (Zero-Disclosure Mode)';
+
+  const actionsEl = document.getElementById('chat-active-actions');
+  if (actionsEl && currentUser) {
+    const minId = Math.min(currentUser.id, userId);
+    const maxId = Math.max(currentUser.id, userId);
+    actionsEl.innerHTML = `
+      <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+        <a href="https://meet.jit.si/skillbridge-direct-${minId}x${maxId}#config.startWithVideoMuted=true&userInfo.displayName=%22${encodeURIComponent(currentUser.display_name)}%22" 
+           target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" 
+           title="Start confidential voice & screen call (camera off by default)" 
+           style="font-size: 0.75rem; padding: 4px 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+          🎥 Call (Voice & Screen)
+        </a>
+        <a href="https://codeshare.io/new" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" 
+           title="Open live collaborative code sandbox" 
+           style="font-size: 0.75rem; padding: 4px 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+          💻 Sandbox
+        </a>
+        <a href="https://excalidraw.com" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" 
+           title="Open shared whiteboard" 
+           style="font-size: 0.75rem; padding: 4px 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+          📐 Whiteboard
+        </a>
+      </div>
+    `;
+  }
+
+  await loadChatMessages(userId);
+  const conv = allConversations.find(c => c.other_user.id === userId);
+  if (conv) conv.unread_count = 0;
+  renderConversationList(allConversations);
+  updateChatUnreadBadge();
+
+  const input = document.getElementById('chat-input');
+  if (input) input.focus();
+}
+
+function startUnifiedChatPolling() {
+  if (chatPollingTimer) clearInterval(chatPollingTimer);
+  chatPollingTimer = setInterval(() => {
+    const chatPane = document.getElementById('tab-chat');
+    if (!chatPane || !chatPane.classList.contains('active')) return;
+
+    if (currentChatMode === 'community' && currentCommunityChannel) {
+      loadCommunityMessages(currentCommunityChannel, true);
+    } else if (currentChatMode === 'direct' && currentChatUserId) {
+      loadChatMessages(currentChatUserId, true);
+    }
+  }, 3500);
+}
+
+async function openChatWithUser(userId, displayName) {
+  if (!currentToken) {
+    showToast('Please log in to chat with peers and teachers', 'error');
+    return;
+  }
+  if (currentUser && currentUser.id === userId) {
+    showToast('You cannot chat with yourself', 'error');
+    return;
+  }
+
+  const chatTabBtn = document.querySelector('[data-target="tab-chat"]');
+  if (chatTabBtn) chatTabBtn.click();
+
+  await selectConversation(userId, displayName);
+}
+
+async function loadChatMessages(userId, silent = false) {
+  const container = document.getElementById('chat-messages-container');
+  if (!container) return;
+
+  if (!silent && (!container.children.length || container.innerHTML.includes('Loading'))) {
+    container.innerHTML = '<div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 1rem;">Loading messages...</div>';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/chat/conversations/${userId}`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) throw new Error('Failed to load thread');
+    const messages = await res.json();
+
+    if (!messages.length) {
+      container.innerHTML = `
+        <div class="chat-empty-state" style="padding: 2rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">👋</div>
+          <div style="font-weight: 600; color: #475569;">No messages yet with ${escapeHtml(currentChatUserName)}</div>
+          <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">Say hello and ask about learning or teaching!</div>
+        </div>
+      `;
+      return;
+    }
+
+    const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight < 120);
+
+    container.innerHTML = messages.map(m => {
+      const isSent = (currentUser && m.sender_id === currentUser.id);
+      const timeStr = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
+          <div style="font-weight: 600; font-size: 0.72rem; margin-bottom: 3px; opacity: 0.85;">
+            ${isSent ? 'You' : escapeHtml(m.sender.display_name)}
+          </div>
+          <div>${escapeHtml(m.content)}</div>
+          <div class="chat-bubble-time">
+            ${timeStr} ${isSent ? (m.is_read ? '✓✓' : '✓') : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (!silent || isNearBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  } catch (err) {
+    console.error('Error fetching chat messages:', err);
+  }
+}
+
+async function handleSendChatMessage(e) {
+  e.preventDefault();
+  const input = document.getElementById('chat-input');
+  if (!input || !currentChatUserId) return;
+
+  const content = input.value.trim();
+  if (!content) return;
+
+  input.value = '';
+  input.focus();
+
+  try {
+    const res = await fetch(`${API_BASE}/chat/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({
+        receiver_id: currentChatUserId,
+        content: content
+      })
+    });
+
+    if (res.ok) {
+      await loadChatMessages(currentChatUserId);
+      await loadConversations();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Could not send message', 'error');
+    }
+  } catch (err) {
+    console.error('Send error:', err);
+    showToast('Network error sending message', 'error');
+  }
+}
+
+// ----------------- USER DIRECTORY (CHAT WITH ANYONE) -----------------
+async function openUserDirectoryModal() {
+  if (!currentToken) {
+    showToast('Please log in to browse members and chat', 'error');
+    return;
+  }
+
+  const modal = document.getElementById('user-directory-modal');
+  const container = document.getElementById('user-directory-list');
+  if (!modal || !container) return;
+
+  modal.classList.add('active');
+  container.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #64748b;">Loading SkillBridge members...</div>';
+
+  try {
+    const res = await fetch(`${API_BASE}/chat/users-directory`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) throw new Error('Failed to load directory');
+    allDirectoryUsers = await res.json();
+
+    renderUserDirectory(allDirectoryUsers);
+  } catch (err) {
+    console.error('Error loading directory:', err);
+    container.innerHTML = '<div style="color: #ef4444; padding: 1.5rem;">Error loading directory.</div>';
+  }
+}
+
+function renderUserDirectory(users) {
+  const container = document.getElementById('user-directory-list');
+  if (!container) return;
+
+  if (!users.length) {
+    container.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: #64748b;">No members found.</div>';
+    return;
+  }
+
+  container.innerHTML = users.map(u => {
+    const initial = (u.display_name || '?').charAt(0).toUpperCase();
+    const isConf = Boolean(u.is_confidential);
+
+    let roleTag = '';
+    if (u.is_mentor) {
+      roleTag = `<span style="font-size: 0.72rem; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 4px; font-weight: 700;">🏢 ${escapeHtml(u.mentor_company || u.company || 'Company')} Mentor</span>`;
+    } else if (u.teaching_skills.length > 0) {
+      roleTag = `<span style="font-size: 0.72rem; background: #ecfdf5; color: #065f46; padding: 2px 7px; border-radius: 4px; font-weight: 600;">👨‍🏫 Teacher</span>`;
+    } else {
+      roleTag = `<span style="font-size: 0.72rem; background: #eff6ff; color: #1e40af; padding: 2px 7px; border-radius: 4px; font-weight: 600;">🎓 Learner</span>`;
+    }
+
+    const teachSkillsStr = u.teaching_skills.length ? `<div style="font-size: 0.75rem; color: #047857; margin-top: 2px;"><strong>Teaches:</strong> ${escapeHtml(u.teaching_skills.join(', '))}</div>` : '';
+    const learnSkillsStr = u.learning_skills.length ? `<div style="font-size: 0.75rem; color: #1d4ed8; margin-top: 2px;"><strong>Learning:</strong> ${escapeHtml(u.learning_skills.join(', '))}</div>` : '';
+
+    return `
+      <div class="directory-user-card">
+        <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
+          <div class="chat-avatar ${isConf ? 'confidential' : ''}">${isConf ? '🔒' : initial}</div>
+          <div style="min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 0.92rem; color: #0f172a;">${escapeHtml(u.display_name)}</span>
+              ${roleTag}
+              ${isConf ? '<span style="font-size: 0.68rem; color: #92400e; background: #fef3c7; padding: 1px 5px; border-radius: 4px;">Confidential</span>' : ''}
+            </div>
+            ${teachSkillsStr}
+            ${learnSkillsStr}
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-sm" onclick="startChatFromDirectory(${u.id}, '${escapeHtml(u.display_name)}')">
+          💬 Chat
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterUserDirectory() {
+  const term = document.getElementById('directory-search-input')?.value.toLowerCase().trim() || '';
+  if (!term) {
+    renderUserDirectory(allDirectoryUsers);
+    return;
+  }
+  const filtered = allDirectoryUsers.filter(u => {
+    const name = (u.display_name || '').toLowerCase();
+    const co = (u.company || u.mentor_company || '').toLowerCase();
+    const teach = u.teaching_skills.join(' ').toLowerCase();
+    const learn = u.learning_skills.join(' ').toLowerCase();
+    return name.includes(term) || co.includes(term) || teach.includes(term) || learn.includes(term);
+  });
+  renderUserDirectory(filtered);
+}
+
+async function startChatFromDirectory(userId, displayName) {
+  closeModals();
+  await openChatWithUser(userId, displayName);
+}
+
+// ==================== 7. BECOME A TEACHER / ADD TEACHING PROFILE ====================
+function openAddTeacherModal() {
+  if (!currentUser) {
+    showToast('Please log in first', 'error');
+    return;
+  }
+  populateSkillSelects();
+  const modal = document.getElementById('modal-add-teacher');
+  if (modal) modal.classList.add('active');
+}
+
+async function handleCreateTeacherProfile(e) {
+  e.preventDefault();
+  const skillId = document.getElementById('modal-teach-skill-id').value;
+  const prof = document.getElementById('modal-teach-prof').value;
+  const exp = parseFloat(document.getElementById('modal-teach-exp').value) || 2.0;
+  const style = document.getElementById('modal-teach-style').value.trim() || null;
+  const pref = document.getElementById('modal-teach-pref').value;
+  const rate = parseFloat(document.getElementById('modal-teach-rate').value) || 0.0;
+  const isConf = document.getElementById('modal-teach-confidential').checked;
+  const showPhone = document.getElementById('modal-teach-show-phone').checked;
+  const showEmail = document.getElementById('modal-teach-show-email').checked;
+
+  if (!skillId) {
+    showToast('Please select a skill', 'error');
+    return;
+  }
+
+  try {
+    // 1. Update user privacy settings
+    await fetch(`${API_BASE}/auth/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({
+        is_confidential_teacher: isConf,
+        show_phone: showPhone,
+        show_email: showEmail
+      })
+    });
+
+    // 2. Add teaching skill
+    const res = await fetch(`${API_BASE}/skills/my-skills`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({
+        skill_id: parseInt(skillId),
+        skill_type: 'TEACH',
+        proficiency_level: prof,
+        years_of_experience: exp,
+        explanation_style: style,
+        exchange_preference: pref,
+        hourly_rate: rate,
+        is_confidential: isConf
+      })
+    });
+
+    if (res.ok) {
+      closeModals();
+      showToast('Teaching profile successfully published!');
+      const meRes = await fetch(`${API_BASE}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      });
+      currentUser = await meRes.json();
+      updateHeaderUserUI();
+      setCatalogType('TEACH');
+      loadTeacherCatalog();
+      loadBarterMatches();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to add teaching skill', 'error');
+    }
+  } catch (err) {
+    console.error('Error creating teacher profile:', err);
+    showToast('Network error publishing profile', 'error');
+  }
+}
+
+// ==================== 8. WANNA GET TAUGHT / ADD LEARNING GOAL ====================
+function openAddLearnerModal() {
+  if (!currentUser) {
+    showToast('Please log in first', 'error');
+    return;
+  }
+  populateSkillSelects();
+  const modal = document.getElementById('modal-add-learner');
+  if (modal) modal.classList.add('active');
+}
+
+async function handleCreateLearnerProfile(e) {
+  e.preventDefault();
+  const skillId = document.getElementById('modal-learn-skill-id').value;
+  const prof = document.getElementById('modal-learn-prof').value;
+  const goal = document.getElementById('modal-learn-goal').value.trim() || null;
+  const pref = document.getElementById('modal-learn-pref').value;
+  const isConf = document.getElementById('modal-learn-confidential').checked;
+
+  if (!skillId) {
+    showToast('Please select a skill', 'error');
+    return;
+  }
+
+  try {
+    if (isConf) {
+      await fetch(`${API_BASE}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({
+          is_confidential_learner: true
+        })
+      });
+    }
+
+    const res = await fetch(`${API_BASE}/skills/my-skills`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentToken}`
+      },
+      body: JSON.stringify({
+        skill_id: parseInt(skillId),
+        skill_type: 'LEARN',
+        proficiency_level: prof,
+        learning_goal: goal,
+        exchange_preference: pref,
+        hourly_rate: 0.0,
+        is_confidential: isConf
+      })
+    });
+
+    if (res.ok) {
+      closeModals();
+      showToast('Learning goal saved! Matching you with peer teachers...');
+      const meRes = await fetch(`${API_BASE}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      });
+      currentUser = await meRes.json();
+      updateHeaderUserUI();
+      setCatalogType('LEARN');
+      loadTeacherCatalog();
+      loadBarterMatches();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to save learning goal', 'error');
+    }
+  } catch (err) {
+    console.error('Error saving learning goal:', err);
+    showToast('Network error saving goal', 'error');
+  }
+}
+
+// ==================== 9. CONTACT SUPPORT & HELP DESK ====================
+async function loadSupportFAQs() {
+  const container = document.getElementById('faq-accordion-list');
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/support/faq`);
+    const faqs = await res.json();
+
+    container.innerHTML = faqs.map(f => `
+      <div class="faq-item">
+        <div class="faq-question">
+          <span>💡</span>
+          <span>${escapeHtml(f.question)}</span>
+        </div>
+        <div class="faq-answer">
+          ${escapeHtml(f.answer)}
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Error loading FAQs:', err);
+  }
+}
+
+async function loadSupportTickets() {
+  const container = document.getElementById('support-tickets-list');
+  if (!container || !currentToken) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/support/tickets`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) return;
+    const tickets = await res.json();
+
+    if (!tickets.length) {
+      container.innerHTML = '<div style="font-size: 0.8rem; color: #94a3b8;">No support tickets submitted yet.</div>';
+      return;
+    }
+
+    container.innerHTML = tickets.map(t => `
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.6rem 0.85rem; margin-bottom: 0.5rem; font-size: 0.82rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+          <strong style="color: #0f172a;">${escapeHtml(t.subject)}</strong>
+          <span class="badge-tag ${t.status === 'RESOLVED' ? 'badge-free' : 'badge-paid'}" style="font-size: 0.7rem;">
+            ${t.status}
+          </span>
+        </div>
+        <div style="color: #64748b; font-size: 0.75rem;">
+          Category: ${escapeHtml(t.category)} • Priority: ${escapeHtml(t.priority)} • ${new Date(t.created_at).toLocaleDateString()}
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Error loading tickets:', err);
+  }
+}
+
+async function handleSupportSubmit(e) {
+  e.preventDefault();
+  const cat = document.getElementById('support-cat').value;
+  const sub = document.getElementById('support-subject').value.trim();
+  const email = document.getElementById('support-email').value.trim();
+  const priority = document.getElementById('support-priority').value;
+  const msg = document.getElementById('support-message').value.trim();
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`;
+
+  try {
+    const res = await fetch(`${API_BASE}/support/tickets`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        category: cat,
+        subject: sub,
+        contact_email: email,
+        priority: priority,
+        message: msg
+      })
+    });
+
+    if (res.ok) {
+      document.getElementById('support-subject').value = '';
+      document.getElementById('support-message').value = '';
+      showToast('Support ticket submitted successfully! Ticket ID assigned.');
+      loadSupportTickets();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Could not submit support ticket', 'error');
+    }
+  } catch (err) {
+    showToast('Network error submitting ticket', 'error');
+  }
+}
+
+// ==================== 10. MY PROFILE & PRIVACY CONTROLS ====================
 async function loadMyProfile() {
   if (!currentUser) return;
 
-  // Form fields
   document.getElementById('prof-display-name').value = currentUser.display_name;
   document.getElementById('prof-full-name').value = currentUser.full_name;
   document.getElementById('prof-email').value = currentUser.email;
@@ -746,12 +1844,20 @@ async function loadMyProfile() {
   document.getElementById('prof-job-title').value = currentUser.job_title || '';
   document.getElementById('prof-bio').value = currentUser.bio || '';
   
-  // Confidentiality toggles
   document.getElementById('prof-confidential-toggle').checked = Boolean(currentUser.is_confidential);
   const tToggle = document.getElementById('prof-conf-teacher-toggle');
   if (tToggle) tToggle.checked = Boolean(currentUser.is_confidential_teacher);
   const lToggle = document.getElementById('prof-conf-learner-toggle');
   if (lToggle) lToggle.checked = Boolean(currentUser.is_confidential_learner);
+
+  const pPhone = document.getElementById('prof-show-phone');
+  if (pPhone) pPhone.checked = Boolean(currentUser.show_phone);
+  const pEmail = document.getElementById('prof-show-email');
+  if (pEmail) pEmail.checked = Boolean(currentUser.show_email);
+  const pRealName = document.getElementById('prof-show-real-name');
+  if (pRealName) pRealName.checked = currentUser.show_real_name !== undefined ? Boolean(currentUser.show_real_name) : true;
+  const pCompany = document.getElementById('prof-show-company');
+  if (pCompany) pCompany.checked = currentUser.show_company !== undefined ? Boolean(currentUser.show_company) : true;
 
   updatePrivacyPreview();
   loadMyUserSkills();
@@ -764,6 +1870,8 @@ function updatePrivacyPreview() {
   const isMaster = document.getElementById('prof-confidential-toggle')?.checked || false;
   const isTeacherConf = isMaster || (document.getElementById('prof-conf-teacher-toggle')?.checked || false);
   const isLearnerConf = isMaster || (document.getElementById('prof-conf-learner-toggle')?.checked || false);
+  const showPhone = document.getElementById('prof-show-phone')?.checked || false;
+  const showEmail = document.getElementById('prof-show-email')?.checked || false;
 
   preview.innerHTML = `
     <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.9rem; font-size: 0.85rem; line-height: 1.45;">
@@ -775,12 +1883,16 @@ function updatePrivacyPreview() {
           : '<span style="color: #1e40af; font-weight: 600;">👁️ Public (Full name, company & bio visible)</span>'
         }
       </div>
-      <div>
+      <div style="margin-bottom: 0.25rem;">
         🎓 <strong>Learner Profile (Wanna Get Taught):</strong> 
         ${isLearnerConf 
           ? '<span style="color: #92400e; font-weight: 600;">🔒 Confidential (Only alias & learning goals shown; identity masked)</span>'
           : '<span style="color: #1e40af; font-weight: 600;">👁️ Public (Full profile visible)</span>'
         }
+      </div>
+      <div style="font-size: 0.8rem; color: #475569; border-top: 1px dashed #cbd5e1; padding-top: 0.35rem; margin-top: 0.35rem;">
+        📞 Phone: <strong>${showPhone ? '👁️ Shown to public' : '🔒 Hidden from public'}</strong> • 
+        ✉️ Email: <strong>${showEmail ? '👁️ Shown to public' : '🔒 Hidden from public'}</strong>
       </div>
     </div>
   `;
@@ -790,6 +1902,10 @@ async function saveProfileSettings() {
   const isConfidential = document.getElementById('prof-confidential-toggle').checked;
   const isConfTeacher = document.getElementById('prof-conf-teacher-toggle')?.checked || false;
   const isConfLearner = document.getElementById('prof-conf-learner-toggle')?.checked || false;
+  const showPhone = document.getElementById('prof-show-phone')?.checked || false;
+  const showEmail = document.getElementById('prof-show-email')?.checked || false;
+  const showRealName = document.getElementById('prof-show-real-name')?.checked || false;
+  const showCompany = document.getElementById('prof-show-company')?.checked || false;
 
   const payload = {
     display_name: document.getElementById('prof-display-name').value.trim(),
@@ -800,7 +1916,11 @@ async function saveProfileSettings() {
     bio: document.getElementById('prof-bio').value.trim(),
     is_confidential: isConfidential,
     is_confidential_teacher: isConfTeacher,
-    is_confidential_learner: isConfLearner
+    is_confidential_learner: isConfLearner,
+    show_phone: showPhone,
+    show_email: showEmail,
+    show_real_name: showRealName,
+    show_company: showCompany
   };
 
   try {
@@ -865,7 +1985,7 @@ async function loadMyUserSkills() {
               ${isTeacher ? '👨‍🏫 TEACH' : '🎓 LEARN'}
             </span>
             ${confBadge}
-            <strong style="margin-left: 0.4rem; color: #1e293b;">${s.skill.name}</strong>
+            <strong style="margin-left: 0.4rem; color: #1e293b;">${escapeHtml(s.skill.name)}</strong>
             <span style="font-size: 0.8rem; color: #64748b; margin-left: 0.4rem;">(${s.proficiency_level})</span>
             ${s.hourly_rate > 0 ? `<span style="font-size: 0.8rem; color: #991b1b; margin-left: 0.4rem;">Fee: $${s.hourly_rate}/hr</span>` : ''}
             
@@ -937,7 +2057,7 @@ async function deleteUserSkill(id) {
       headers: { 'Authorization': `Bearer ${currentToken}` }
     });
     if (res.ok) {
-      showToast('Skill removed');
+      showToast('Skill removed from profile');
       loadMyUserSkills();
       loadTeacherCatalog();
       loadBarterMatches();
@@ -947,74 +2067,94 @@ async function deleteUserSkill(id) {
   }
 }
 
-// MODALS HANDLING
-function openExchangeModal(userId, displayName, skillName, hourlyRate, pref, targetRole = 'TEACH') {
+// ==================== MODALS HANDLING ====================
+function openExchangeModal(userId, displayName, skillName, hourlyRate, pref, skillType) {
+  if (!currentToken) {
+    showToast('Please log in first', 'error');
+    return;
+  }
   document.getElementById('exchange-modal').classList.add('active');
   document.getElementById('req-receiver-id').value = userId;
-  document.getElementById('req-teacher-display').innerText = displayName;
-  document.getElementById('req-skill-display').innerText = (targetRole === 'LEARN' ? `Offering to Teach: ${skillName}` : skillName);
-  document.getElementById('req-price-display').innerText = hourlyRate > 0 ? `$${hourlyRate}/hr` : 'Free / Barter';
+  document.getElementById('modal-exchange-target').innerText = displayName;
+  document.getElementById('modal-exchange-skill').innerText = skillName;
+  document.getElementById('req-target-mode').value = pref;
 
-  // Find skill id from masterSkills
-  const foundSkill = masterSkills.find(s => s.name === skillName);
-  if (foundSkill) {
-    if (targetRole === 'LEARN') {
-      document.getElementById('req-offer-skill').value = foundSkill.id;
-      document.getElementById('req-requested-skill-id').value = foundSkill.id;
-    } else {
-      document.getElementById('req-requested-skill-id').value = foundSkill.id;
-    }
+  const titleEl = document.getElementById('modal-exchange-title');
+  if (skillType === 'TEACH') {
+    titleEl.innerText = `Request Tutoring from ${displayName}`;
+  } else {
+    titleEl.innerText = `Offer to Teach / Barter with ${displayName}`;
   }
 
-  // Pre-set rate
+  const exSelect = document.getElementById('req-exchange-type');
+  if (pref === 'BARTER_ONLY') {
+    exSelect.value = 'BARTER';
+  } else if (pref === 'PAID_ONLY') {
+    exSelect.value = 'PAID_ONE_WAY';
+  } else {
+    exSelect.value = 'BARTER';
+  }
+
   document.getElementById('req-monetary-amount').value = hourlyRate || 0.0;
-  toggleExchangeModeFields();
+  toggleExchangeInputs();
 }
 
 function openBarterRequestModal(peerId, peerName, iTeach, peerTeaches) {
+  if (!currentToken) {
+    showToast('Please log in first', 'error');
+    return;
+  }
   document.getElementById('exchange-modal').classList.add('active');
   document.getElementById('req-receiver-id').value = peerId;
-  document.getElementById('req-teacher-display').innerText = peerName;
-  document.getElementById('req-skill-display').innerText = peerTeaches;
-  document.getElementById('req-price-display').innerText = '0$ Barter Swap';
+  document.getElementById('modal-exchange-target').innerText = peerName;
+  document.getElementById('modal-exchange-skill').innerText = peerTeaches;
 
   const sTeach = masterSkills.find(s => s.name === iTeach);
-  const sLearn = masterSkills.find(s => s.name === peerTeaches);
   if (sTeach) document.getElementById('req-offer-skill').value = sTeach.id;
-  if (sLearn) document.getElementById('req-requested-skill-id').value = sLearn.id;
 
   document.getElementById('req-exchange-type').value = 'BARTER';
   document.getElementById('req-monetary-amount').value = 0.0;
   document.getElementById('req-session-details').value = `Direct Barter: I will teach you ${iTeach} in exchange for learning ${peerTeaches}.`;
-  toggleExchangeModeFields();
+  toggleExchangeInputs();
 }
 
-function toggleExchangeModeFields() {
+function toggleExchangeInputs() {
   const type = document.getElementById('req-exchange-type').value;
   const barterBox = document.getElementById('barter-specific-group');
   const paidBox = document.getElementById('paid-specific-group');
 
   if (type === 'BARTER') {
-    barterBox.style.display = 'block';
-    paidBox.style.display = 'none';
+    if (barterBox) barterBox.style.display = 'block';
+    if (paidBox) paidBox.style.display = 'none';
   } else if (type === 'PAID_ONE_WAY') {
-    barterBox.style.display = 'none';
-    paidBox.style.display = 'block';
+    if (barterBox) barterBox.style.display = 'none';
+    if (paidBox) paidBox.style.display = 'block';
   } else {
-    barterBox.style.display = 'none';
-    paidBox.style.display = 'none';
+    if (barterBox) barterBox.style.display = 'none';
+    if (paidBox) paidBox.style.display = 'none';
   }
 }
 
 async function submitExchangeRequest() {
   const receiverId = parseInt(document.getElementById('req-receiver-id').value);
   const type = document.getElementById('req-exchange-type').value;
-  const requestedSkillId = parseInt(document.getElementById('req-requested-skill-id').value) || null;
   const offeredSkillId = (type === 'BARTER') ? (parseInt(document.getElementById('req-offer-skill').value) || null) : null;
   const amount = (type === 'PAID_ONE_WAY') ? parseFloat(document.getElementById('req-monetary-amount').value) || 0.0 : 0.0;
   const details = document.getElementById('req-session-details').value.trim();
+  const hideIdentity = document.getElementById('req-hide-identity')?.checked || false;
 
   try {
+    if (hideIdentity) {
+      await fetch(`${API_BASE}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ is_confidential_learner: true })
+      });
+    }
+
     const res = await fetch(`${API_BASE}/exchanges`, {
       method: 'POST',
       headers: {
@@ -1024,26 +2164,31 @@ async function submitExchangeRequest() {
       body: JSON.stringify({
         receiver_id: receiverId,
         exchange_type: type,
-        receiver_requested_skill_id: requestedSkillId,
         sender_offered_skill_id: offeredSkillId,
         monetary_amount: amount,
         session_details: details
       })
     });
+
     if (res.ok) {
       closeModals();
-      showToast('Exchange request sent successfully!');
+      showToast('Exchange proposal submitted successfully!');
       loadMyExchanges();
     } else {
       const err = await res.json();
-      showToast(err.detail || 'Failed to submit request', 'error');
+      showToast(err.detail || 'Failed to submit proposal', 'error');
     }
   } catch (err) {
     console.error('Exchange submit error:', err);
+    showToast('Network error submitting exchange', 'error');
   }
 }
 
 function openAskMentorModal(mentorId, mentorName, companyName) {
+  if (!currentToken) {
+    showToast('Please log in first', 'error');
+    return;
+  }
   document.getElementById('ask-mentor-modal').classList.add('active');
   document.getElementById('ask-mentor-id').value = mentorId;
   document.getElementById('ask-mentor-target').innerText = `${mentorName} (${companyName})`;
@@ -1056,7 +2201,7 @@ async function submitDirectQuestion() {
   const isPrivate = document.getElementById('ask-q-private').checked;
 
   if (!title || !text) {
-    showToast('Please provide a title and details', 'error');
+    showToast('Please fill in title and question', 'error');
     return;
   }
 
@@ -1069,39 +2214,46 @@ async function submitDirectQuestion() {
       },
       body: JSON.stringify({
         mentor_user_id: mentorId,
-        title: title,
+        title,
         question_text: text,
         is_private: isPrivate
       })
     });
     if (res.ok) {
       closeModals();
-      showToast('Direct question sent to company professional!');
+      showToast('Question sent directly to company mentor!');
+      document.getElementById('ask-q-title').value = '';
+      document.getElementById('ask-q-text').value = '';
       loadMentorQuestions();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to post question', 'error');
     }
   } catch (err) {
-    console.error('Ask mentor error:', err);
+    console.error('Ask error:', err);
   }
 }
 
 function openContributeQuestionModal() {
+  if (!currentToken) {
+    showToast('Please log in first', 'error');
+    return;
+  }
   document.getElementById('contribute-question-modal').classList.add('active');
 }
 
 async function submitInterviewQuestion() {
-  const payload = {
-    company_name: document.getElementById('add-q-company').value.trim(),
-    role: document.getElementById('add-q-role').value.trim(),
-    category: document.getElementById('add-q-category').value.trim(),
-    round_type: document.getElementById('add-q-round').value.trim(),
-    difficulty: document.getElementById('add-q-difficulty').value,
-    question_text: document.getElementById('add-q-text').value.trim(),
-    answer_explanation: document.getElementById('add-q-ans').value.trim(),
-    tags: document.getElementById('add-q-tags').value.trim()
-  };
+  const company = document.getElementById('add-q-company').value.trim();
+  const role = document.getElementById('add-q-role').value.trim();
+  const cat = document.getElementById('add-q-category').value.trim();
+  const diff = document.getElementById('add-q-difficulty').value;
+  const round = document.getElementById('add-q-round').value.trim();
+  const qText = document.getElementById('add-q-text').value.trim();
+  const ans = document.getElementById('add-q-ans').value.trim();
+  const tags = document.getElementById('add-q-tags').value.trim();
 
-  if (!payload.company_name || !payload.question_text || !payload.answer_explanation) {
-    showToast('Please fill out all required fields', 'error');
+  if (!company || !role || !qText || !ans) {
+    showToast('Please complete all required fields', 'error');
     return;
   }
 
@@ -1112,21 +2264,33 @@ async function submitInterviewQuestion() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentToken}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        company_name: company,
+        role,
+        category: cat || 'General',
+        difficulty: diff,
+        round_type: round || 'Technical Round',
+        question_text: qText,
+        answer_explanation: ans,
+        tags
+      })
     });
     if (res.ok) {
       closeModals();
-      showToast('Interview question contributed to question bank!');
+      showToast('Question contributed to question bank!');
       loadQuestionBank();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to submit question', 'error');
     }
   } catch (err) {
-    console.error('Contribute error:', err);
+    console.error('Question submit error:', err);
   }
 }
 
-function openReviewModal(exchangeId) {
+function openReviewModal(exId) {
   document.getElementById('review-modal').classList.add('active');
-  document.getElementById('review-exchange-id').value = exchangeId;
+  document.getElementById('review-exchange-id').value = exId;
 }
 
 async function submitReview() {
@@ -1145,7 +2309,7 @@ async function submitReview() {
     });
     if (res.ok) {
       closeModals();
-      showToast('Review submitted! Thank you.');
+      showToast('Thank you for rating your session!');
       loadMyExchanges();
     }
   } catch (err) {
@@ -1157,25 +2321,26 @@ function closeModals() {
   document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
 }
 
-// Utility: Markdown & HTML helper
+// Helpers
 function escapeHtml(str) {
   if (!str) return '';
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function renderMarkdown(text) {
   if (!text) return '';
   let html = escapeHtml(text);
-  // Code blocks
   html = html.replace(/```([\s\S]*?)```/g, '<pre style="background: #1e293b; color: #f8fafc; padding: 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.5rem 0;"><code>$1</code></pre>');
-  // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  // Newlines
   html = html.replace(/\n/g, '<br>');
   return html;
 }
 
-// Toast notification
 function showToast(message, type = 'success') {
   let toast = document.getElementById('skillbridge-toast');
   if (!toast) {
@@ -1205,4 +2370,3 @@ function showToast(message, type = 'success') {
     setTimeout(() => { toast.style.display = 'none'; }, 300);
   }, 3200);
 }
-

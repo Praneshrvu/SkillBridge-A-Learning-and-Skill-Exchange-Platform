@@ -1,6 +1,5 @@
-import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+from typing import List
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SkillBridge - Peer-to-Peer Skill Sharing & Mentorship Platform"
@@ -20,6 +19,10 @@ class Settings(BaseSettings):
     # Database configuration
     DATABASE_URL: str = "mysql+pymysql://root:root@localhost:3306/skillbridge_db"
     FALLBACK_TO_SQLITE: bool = True
+
+    # CORS — comma-separated list of allowed frontend origins.
+    # In .env set e.g. CORS_ORIGINS="http://localhost:5173,https://app.yourdomain.com"
+    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
     
     model_config = SettingsConfigDict(
         env_file=".env",

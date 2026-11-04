@@ -13,6 +13,10 @@ class UserBase(BaseModel):
     is_confidential: bool = False
     is_confidential_teacher: bool = False
     is_confidential_learner: bool = False
+    show_phone: bool = False
+    show_email: bool = False
+    show_real_name: bool = True
+    show_company: bool = True
     avatar_url: Optional[str] = None
 
 class UserCreate(BaseModel):
@@ -27,6 +31,10 @@ class UserCreate(BaseModel):
     is_confidential: bool = False
     is_confidential_teacher: bool = False
     is_confidential_learner: bool = False
+    show_phone: bool = False
+    show_email: bool = False
+    show_real_name: bool = True
+    show_company: bool = True
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -38,6 +46,10 @@ class UserUpdate(BaseModel):
     is_confidential: Optional[bool] = None
     is_confidential_teacher: Optional[bool] = None
     is_confidential_learner: Optional[bool] = None
+    show_phone: Optional[bool] = None
+    show_email: Optional[bool] = None
+    show_real_name: Optional[bool] = None
+    show_company: Optional[bool] = None
     avatar_url: Optional[str] = None
 
 class UserLogin(BaseModel):
@@ -64,8 +76,12 @@ class UserPublic(BaseModel):
     is_confidential_teacher: bool = False
     is_confidential_learner: bool = False
     
-    # Sensitive fields are None or masked if confidential
+    # Sensitive personal details (selectively revealed if the user chose to show them)
     full_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    show_phone: bool = False
+    show_email: bool = False
     bio: Optional[str] = None
     company: Optional[str] = None
     job_title: Optional[str] = None
@@ -80,8 +96,8 @@ class UserPublic(BaseModel):
         - role='teacher': user requested confidentiality as teacher (or master confidential)
         - role='learner': user requested confidentiality as learner (or master confidential)
         - role='general': checks master is_confidential
-        If confidential, masks full_name, email, phone, company, and bio.
-        Only display_name and what they can teach / want to learn remain public!
+        Personal details (phone, email, full name, company) are only shown if the user
+        explicitly enabled their respective visibility flags (show_phone, show_email, show_real_name).
         """
         is_conf = False
         if role == "teacher":
@@ -99,6 +115,10 @@ class UserPublic(BaseModel):
                 is_confidential_teacher=getattr(user_obj, "is_confidential_teacher", False),
                 is_confidential_learner=getattr(user_obj, "is_confidential_learner", False),
                 full_name=None, # Hidden
+                phone=None,     # Hidden
+                email=None,     # Hidden
+                show_phone=False,
+                show_email=False,
                 bio=f"[Confidential {role.capitalize() if role != 'general' else 'User'} Profile - Personal identity protected by user choice]",
                 company=None, # Hidden
                 job_title=None, # Hidden
@@ -106,16 +126,28 @@ class UserPublic(BaseModel):
                 is_company_verified=user_obj.is_company_verified,
                 created_at=user_obj.created_at
             )
+        
+        # When profile is public, respect granular user choices (option to show/hide phone, email, full name)
+        phone_val = user_obj.phone if getattr(user_obj, "show_phone", False) else None
+        email_val = user_obj.email if getattr(user_obj, "show_email", False) else None
+        name_val = user_obj.full_name if getattr(user_obj, "show_real_name", True) else None
+        company_val = user_obj.company if getattr(user_obj, "show_company", True) else None
+        job_val = user_obj.job_title if getattr(user_obj, "show_company", True) else None
+
         return cls(
             id=user_obj.id,
             display_name=user_obj.display_name,
             is_confidential=False,
             is_confidential_teacher=getattr(user_obj, "is_confidential_teacher", False),
             is_confidential_learner=getattr(user_obj, "is_confidential_learner", False),
-            full_name=user_obj.full_name,
+            full_name=name_val,
+            phone=phone_val,
+            email=email_val,
+            show_phone=getattr(user_obj, "show_phone", False),
+            show_email=getattr(user_obj, "show_email", False),
             bio=user_obj.bio,
-            company=user_obj.company,
-            job_title=user_obj.job_title,
+            company=company_val,
+            job_title=job_val,
             avatar_url=user_obj.avatar_url,
             is_company_verified=user_obj.is_company_verified,
             created_at=user_obj.created_at

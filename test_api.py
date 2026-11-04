@@ -166,3 +166,169 @@ def test_company_mentors_and_direct_qa():
     assert ans_res.status_code == 200
     assert ans_res.json()["status"] == "ANSWERED"
 
+
+
+def test_personal_contact_details_visibility():
+    # Login as Bob
+    login_res = client.post("/api/auth/login", json={"email": "bob@skillbridge.dev", "password": "pass123"})
+    assert login_res.status_code == 200
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Fetch Alice (User 1): has show_phone=True, show_email=True
+    res_alice = client.get("/api/users/1", headers=headers)
+    assert res_alice.status_code == 200
+    data_alice = res_alice.json()
+    assert data_alice["display_name"] == "Alice_CppMaster"
+    assert data_alice["show_phone"] is True
+    assert data_alice["show_email"] is True
+    assert data_alice["phone"] == "+1-555-0101"
+    assert data_alice["email"] == "alice@skillbridge.dev"
+
+    # 2. Fetch Bob (User 2): has show_phone=False, show_email=False
+    res_bob = client.get("/api/users/2", headers=headers)
+    assert res_bob.status_code == 200
+    data_bob = res_bob.json()
+    assert data_bob["display_name"] == "JavaGuru_Bob"
+    assert data_bob["show_phone"] is False
+    assert data_bob["show_email"] is False
+    assert data_bob["phone"] is None # Hidden from public view!
+    assert data_bob["email"] is None # Hidden from public view!
+
+    # 3. Check teacher catalog includes phone & email flags
+    cat_res = client.get("/api/skills/catalog?skill_type=TEACH")
+    assert cat_res.status_code == 200
+    teachers = cat_res.json()
+    alice_item = next((t for t in teachers if t["user_id"] == 1), None)
+    bob_item = next((t for t in teachers if t["user_id"] == 2), None)
+    assert alice_item is not None
+    assert alice_item["phone"] == "+1-555-0101"
+    assert bob_item is not None
+    assert bob_item["phone"] is None
+
+def test_direct_chat_api():
+    # 1. Login as Alice
+    alice_login = client.post("/api/auth/login", json={"email": "alice@skillbridge.dev", "password": "pass123"})
+    assert alice_login.status_code == 200
+    alice_token = alice_login.json()["access_token"]
+    alice_headers = {"Authorization": f"Bearer {alice_token}"}
+
+    # 2. Alice sends a direct message to Bob (User ID 2)
+    msg_payload = {
+        "receiver_id": 2,
+        "content": "Hi Bob! Are we still on for our C++ and Java session this Saturday?"
+    }
+    send_res = client.post("/api/chat/messages", json=msg_payload, headers=alice_headers)
+    assert send_res.status_code == 201
+    sent_data = send_res.json()
+    assert sent_data["content"] == msg_payload["content"]
+    assert sent_data["sender_id"] == 1
+    assert sent_data["receiver_id"] == 2
+    assert sent_data["is_read"] is False
+
+    # 3. Cannot send message to oneself
+    self_res = client.post("/api/chat/messages", json={"receiver_id": 1, "content": "Hello myself"}, headers=alice_headers)
+    assert self_res.status_code == 400
+
+    # 4. Login as Bob
+    bob_login = client.post("/api/auth/login", json={"email": "bob@skillbridge.dev", "password": "pass123"})
+    assert bob_login.status_code == 200
+    bob_token = bob_login.json()["access_token"]
+    bob_headers = {"Authorization": f"Bearer {bob_token}"}
+
+    # 5. Bob fetches active conversations
+    convs_res = client.get("/api/chat/conversations", headers=bob_headers)
+    assert convs_res.status_code == 200
+    convs = convs_res.json()
+    assert len(convs) >= 1
+    alice_conv = next((c for c in convs if c["other_user"]["id"] == 1), None)
+    assert alice_conv is not None
+    assert alice_conv["unread_count"] >= 1
+
+    # 6. Bob opens conversation thread with Alice -> marks unread as read
+    thread_res = client.get("/api/chat/conversations/1", headers=bob_headers)
+    assert thread_res.status_code == 200
+    thread = thread_res.json()
+    assert len(thread) >= 2
+    # Verify latest message from Alice is now read
+    latest_alice_msg = next((m for m in reversed(thread) if m["sender_id"] == 1), None)
+    assert latest_alice_msg is not None
+    assert latest_alice_msg["is_read"] is True
+
+
+def test_community_lounge_chat():
+    # 1. Login as Alice
+    alice_login = client.post("/api/auth/login", json={"email": "alice@skillbridge.dev", "password": "pass123"})
+    assert alice_login.status_code == 200
+    token = alice_login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 2. Get public channels
+    chan_res = client.get("/api/chat/community/channels")
+    assert chan_res.status_code == 200
+    channels = chan_res.json()
+    assert len(channels) >= 3
+    assert any(c["id"] == "general" for c in channels)
+
+    # 3. Read messages in global lounge
+    msgs_res = client.get("/api/chat/community/messages?channel=general")
+    assert msgs_res.status_code == 200
+    msgs = msgs_res.json()
+    assert len(msgs) >= 2
+
+    # 4. Post message to global lounge
+    new_msg = {
+        "channel": "general",
+        "content": "Excited to collaborate with all learners on SkillBridge!"
+    }
+    post_res = client.post("/api/chat/community/messages", json=new_msg, headers=headers)
+    assert post_res.status_code == 201
+    created_data = post_res.json()
+    assert created_data["content"] == new_msg["content"]
+    assert created_data["channel"] == "general"
+    assert created_data["sender"]["display_name"] == "Alice_CppMaster"
+
+    # 5. Fetch users directory for 1-click chatting with anyone
+    dir_res = client.get("/api/chat/users-directory", headers=headers)
+    assert dir_res.status_code == 200
+    users = dir_res.json()
+    assert len(users) >= 4
+    bob_user = next((u for u in users if u["id"] == 2), None)
+    assert bob_user is not None
+    assert bob_user["display_name"] == "JavaGuru_Bob"
+
+
+def test_support_services():
+    # 1. Fetch FAQs
+    faq_res = client.get("/api/support/faq")
+    assert faq_res.status_code == 200
+    faqs = faq_res.json()
+    assert len(faqs) >= 4
+    assert any("Escrow" in f["question"] for f in faqs)
+
+    # 2. Login as Bob
+    login_res = client.post("/api/auth/login", json={"email": "bob@skillbridge.dev", "password": "pass123"})
+    assert login_res.status_code == 200
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 3. Create Support Ticket
+    ticket_data = {
+        "category": "Barter Swap",
+        "subject": "Inquiry about scheduling reminders for mutual barter sessions",
+        "message": "Does SkillBridge send calendar invitations once both parties accept a barter swap?",
+        "contact_email": "bob@skillbridge.dev",
+        "priority": "NORMAL"
+    }
+    create_res = client.post("/api/support/tickets", json=ticket_data, headers=headers)
+    assert create_res.status_code == 201
+    created = create_res.json()
+    assert created["subject"] == ticket_data["subject"]
+    assert created["status"] == "OPEN"
+
+    # 4. Fetch my support tickets
+    my_tickets = client.get("/api/support/tickets", headers=headers)
+    assert my_tickets.status_code == 200
+    tickets = my_tickets.json()
+    assert len(tickets) >= 1
+    assert any(t["subject"] == ticket_data["subject"] for t in tickets)

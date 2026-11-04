@@ -108,9 +108,11 @@ def browse_teacher_catalog(
         if confidential_only is not None and is_conf != confidential_only:
             continue
 
-        company_display = None if is_conf else user.company
-        full_name_display = None if is_conf else user.full_name
+        company_display = None if is_conf else (user.company if getattr(user, "show_company", True) else None)
+        full_name_display = None if is_conf else (user.full_name if getattr(user, "show_real_name", True) else None)
         bio_display = None if is_conf else user.bio
+        phone_display = None if is_conf else (user.phone if getattr(user, "show_phone", False) else None)
+        email_display = None if is_conf else (user.email if getattr(user, "show_email", False) else None)
 
         catalog.append(
             SkillCatalogItem(
@@ -120,6 +122,10 @@ def browse_teacher_catalog(
                 display_name=user.display_name,
                 is_confidential=is_conf,
                 full_name=full_name_display,
+                phone=phone_display,
+                email=email_display,
+                show_phone=bool(getattr(user, "show_phone", False) and not is_conf),
+                show_email=bool(getattr(user, "show_email", False) and not is_conf),
                 company=company_display,
                 bio=bio_display,
                 skill_name=skill.name,
