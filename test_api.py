@@ -1,7 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.core.database import init_db
 
+init_db()
 client = TestClient(app)
 
 def test_health_and_index():
@@ -332,3 +334,64 @@ def test_support_services():
     tickets = my_tickets.json()
     assert len(tickets) >= 1
     assert any(t["subject"] == ticket_data["subject"] for t in tickets)
+
+def test_notifications_system():
+    # Login as Alice
+    login_res = client.post("/api/auth/login", json={"email": "alice@skillbridge.dev", "password": "pass123"})
+    assert login_res.status_code == 200
+    alice_token = login_res.json()["access_token"]
+    alice_headers = {"Authorization": f"Bearer {alice_token}"}
+
+    # Fetch notifications for Alice
+    res = client.get("/api/notifications", headers=alice_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "notifications" in data
+    assert "unread_count" in data
+
+    # Mark all read
+    mark_all = client.post("/api/notifications/mark-all-read", headers=alice_headers)
+    assert mark_all.status_code == 200
+
+    # Verify unread count is now 0
+    res_after = client.get("/api/notifications", headers=alice_headers)
+    assert res_after.status_code == 200
+    assert res_after.json()["unread_count"] == 0
+
+def test_ai_assistant_chatbot():
+    # 1. Ask about barter
+    res = client.post("/api/assistant/chat", json={"message": "How does $0 barter work?"})
+    assert res.status_code == 200
+    data = res.json()
+    assert "Barter" in data["reply"]
+    assert "suggestions" in data
+    assert len(data["suggestions"]) >= 1
+
+    # 2. Ask about escrow
+    res_escrow = client.post("/api/assistant/chat", json={"message": "Explain how escrow payment works"})
+    assert res_escrow.status_code == 200
+    assert "Escrow" in res_escrow.json()["reply"]
+
+    # 3. Ask to teach a whole course -> polite scoping guide
+    res_course = client.post("/api/assistant/chat", json={"message": "Teach me full Python from scratch"})
+    assert res_course.status_code == 200
+    assert "Platform Assistant" in res_course.json()["reply"]
+
+def test_course_reference_videos_and_resources():
+    # 1. Public / unauthenticated preview
+    res = client.get("/api/courses/resources")
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["modules"]) >= 4
+    cpp_module = next((m for m in data["modules"] if "C++" in m["skill_name"]), None)
+    assert cpp_module is not None
+    assert len(cpp_module["reference_videos"]) >= 1
+    assert len(cpp_module["special_resources"]) >= 1
+
+    # 2. Login as Bob (who completed paid session)
+    login_res = client.post("/api/auth/login", json={"email": "bob@skillbridge.dev", "password": "pass123"})
+    assert login_res.status_code == 200
+    bob_token = login_res.json()["access_token"]
+    res_auth = client.get("/api/courses/resources", headers={"Authorization": f"Bearer {bob_token}"})
+    assert res_auth.status_code == 200
+    assert "is_paid_learner" in res_auth.json()

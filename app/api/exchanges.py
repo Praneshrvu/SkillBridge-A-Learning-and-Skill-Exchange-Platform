@@ -15,6 +15,7 @@ from app.schemas.exchange import (
 from app.schemas.user import UserPublic
 from app.schemas.skill import SkillResponse
 from app.api.deps import get_current_user
+from app.api.notifications import create_notification
 
 router = APIRouter(prefix="/exchanges", tags=["Skill Exchanges & Tutoring Sessions"])
 
@@ -99,6 +100,22 @@ def create_exchange_request(
     db.add(exchange)
     db.commit()
     db.refresh(exchange)
+
+    # Notify receiver about the new exchange proposal
+    try:
+        skill_text = ""
+        if exchange.receiver_requested_skill:
+            skill_text = f" for '{exchange.receiver_requested_skill.name}'"
+        create_notification(
+            db=db,
+            user_id=receiver.id,
+            title="New Exchange Proposal Received! 📩",
+            message=f"{current_user.display_name} sent you a {exchange.exchange_type} request{skill_text}.",
+            notification_type="EXCHANGE_REQUEST",
+            link_tab="tab-exchanges"
+        )
+    except Exception as err:
+        pass
 
     return build_exchange_response(exchange)
 
@@ -189,6 +206,39 @@ def update_exchange_status(
     db.commit()
     db.refresh(ex)
 
+    # Trigger notifications based on status transition
+    try:
+        partner_id = ex.sender_id if current_user.id == ex.receiver_id else ex.receiver_id
+        if new_status == "ACCEPTED":
+            create_notification(
+                db=db,
+                user_id=partner_id,
+                title="Proposal Accepted! 🎉",
+                message=f"{current_user.display_name} accepted your exchange proposal! Your zero-disclosure classroom is now ready.",
+                notification_type="EXCHANGE_ACCEPTED",
+                link_tab="tab-exchanges"
+            )
+        elif new_status == "REJECTED":
+            create_notification(
+                db=db,
+                user_id=partner_id,
+                title="Proposal Declined ❌",
+                message=f"{current_user.display_name} declined the exchange proposal.",
+                notification_type="EXCHANGE_REJECTED",
+                link_tab="tab-exchanges"
+            )
+        elif new_status == "COMPLETED":
+            create_notification(
+                db=db,
+                user_id=partner_id,
+                title="Session Completed! 🏆",
+                message=f"{current_user.display_name} marked the skill session as completed. Please leave a star review!",
+                notification_type="SESSION_COMPLETED",
+                link_tab="tab-exchanges"
+            )
+    except Exception:
+        pass
+
     return build_exchange_response(ex)
 
 @router.post("/{exchange_id}/payment", response_model=ExchangeResponse)
@@ -242,6 +292,29 @@ def handle_payment_action(
     ex.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(ex)
+
+    # Trigger notifications for escrow payments
+    try:
+        if act == "PAY_ESCROW":
+            create_notification(
+                db=db,
+                user_id=ex.receiver_id, # teacher
+                title="Escrow Payment Funded! 💳",
+                message=f"{current_user.display_name} deposited ${ex.monetary_amount} into platform escrow for your session.",
+                notification_type="PAYMENT_ESCROW",
+                link_tab="tab-exchanges"
+            )
+        elif act == "RELEASE_TO_TEACHER":
+            create_notification(
+                db=db,
+                user_id=ex.receiver_id, # teacher
+                title="Payment Released! 💰",
+                message=f"${ex.monetary_amount} was released from escrow to your wallet balance.",
+                notification_type="PAYMENT_ESCROW",
+                link_tab="tab-exchanges"
+            )
+    except Exception:
+        pass
 
     return build_exchange_response(ex)
 

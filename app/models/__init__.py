@@ -6,6 +6,7 @@ from app.models.question_bank import InterviewQuestion, QuestionVote
 from app.models.company_mentor import CompanyMentorProfile, DirectMentorQuestion
 from app.models.chat import ChatMessage, CommunityMessage
 from app.models.support import SupportTicket
+from app.models.notification import Notification
 
 __all__ = [
     "Base",
@@ -21,4 +22,5 @@ __all__ = [
     "ChatMessage",
     "CommunityMessage",
     "SupportTicket",
+    "Notification",
 ]

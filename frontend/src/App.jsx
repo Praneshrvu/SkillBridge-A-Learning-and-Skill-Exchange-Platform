@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth, DEMO_USERS } from './context/AuthContext';
 import CatalogTab from './components/CatalogTab';
 import BarterTab from './components/BarterTab';
@@ -7,6 +7,7 @@ import MentorsTab from './components/MentorsTab';
 import ExchangesTab from './components/ExchangesTab';
 import ChatTab from './components/ChatTab';
 import ProfileTab from './components/ProfileTab';
+import VideosTab from './components/VideosTab';
 
 const SIDEBAR_ITEMS = [
   { group: 'EXPLORE & DISCOVER', items: [
@@ -14,6 +15,7 @@ const SIDEBAR_ITEMS = [
     { id: 'barter', icon: '🤝', label: '2-Way Barter Matcher', badge: '$0' },
     { id: 'questions', icon: '📚', label: 'Interview Question Bank' },
     { id: 'mentors', icon: '🏢', label: 'Company Mentors' },
+    { id: 'videos', icon: '🎬', label: 'Course Videos & Resources', badge: 'Perks' },
   ]},
   { group: 'MY WORKSPACE', items: [
     { id: 'exchanges', icon: '📬', label: 'My Exchanges & Sessions' },
@@ -30,6 +32,99 @@ function Shell() {
   const [chatTarget, setChatTarget] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Notification state
+  const [notifications, setNotifications] = useState([]);
+  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+
+  // AI Assistant state
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiInput, setAiInput] = useState('');
+  const [aiMessages, setAiMessages] = useState([
+    {
+      sender: 'bot',
+      text: "👋 **Hi! I'm your SkillBridge AI Assistant.**\n\nI can help you understand how $0 Barter or Escrow payments work, configure confidential stealth mode, and troubleshoot any website errors.",
+      suggestions: ["How does $0 Barter work?", "How does Escrow payment work?", "How to use Anonymous Mode?", "Where are course reference videos?"]
+    }
+  ]);
+  const [aiThinking, setAiThinking] = useState(false);
+
+  const token = localStorage.getItem('skillbridge_token');
+
+  // Load notifications
+  const loadNotifications = () => {
+    if (!token) return;
+    fetch('/api/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(d => {
+        setNotifications(d.notifications || []);
+        setNotifUnreadCount(d.unread_count || 0);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 25000);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  const markAllNotifsRead = () => {
+    if (!token) return;
+    fetch('/api/notifications/mark-all-read', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).then(() => loadNotifications());
+  };
+
+  const handleNotifClick = (n) => {
+    if (!token) return;
+    fetch(`/api/notifications/${n.id}/read`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).then(() => loadNotifications());
+    setShowNotifDropdown(false);
+    if (n.link_tab) {
+      const tabKey = n.link_tab.replace('tab-', '');
+      setActiveTab(tabKey);
+    }
+  };
+
+  // AI Assistant send
+  const sendAIMessage = (text) => {
+    const query = text || aiInput;
+    if (!query.trim()) return;
+
+    setAiMessages(prev => [...prev, { sender: 'user', text: query }]);
+    setAiInput('');
+    setAiThinking(true);
+
+    fetch('/api/assistant/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: query })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setAiThinking(false);
+        setAiMessages(prev => [...prev, {
+          sender: 'bot',
+          text: data.reply,
+          suggestions: data.suggestions,
+          action_link: data.action_link
+        }]);
+      })
+      .catch(() => {
+        setAiThinking(false);
+        setAiMessages(prev => [...prev, {
+          sender: 'bot',
+          text: "I encountered a connection issue. Please ensure the SkillBridge server is running."
+        }]);
+      });
+  };
 
   const openChatWith = (userId, displayName) => {
     setChatTarget({ userId, displayName });
@@ -132,6 +227,56 @@ function Shell() {
           </div>
 
           <div className="topbar-right">
+            {/* Notifications Bell & Dropdown */}
+            <div className="notification-wrapper">
+              <button
+                className="btn btn-outline btn-sm notification-bell-btn"
+                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                title="Notifications"
+                style={{ fontSize: '0.95rem', padding: '4px 10px', position: 'relative' }}
+              >
+                🔔
+                {notifUnreadCount > 0 && (
+                  <span className="notification-badge">{notifUnreadCount > 99 ? '99+' : notifUnreadCount}</span>
+                )}
+              </button>
+
+              {showNotifDropdown && (
+                <div className="notification-dropdown" style={{ display: 'block' }}>
+                  <div className="notif-header">
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>🔔 Notifications</div>
+                    <button className="notif-mark-all-btn" onClick={markAllNotifsRead}>Mark all read</button>
+                  </div>
+                  <div className="notif-list">
+                    {!notifications.length ? (
+                      <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
+                        No notifications yet.
+                      </div>
+                    ) : (
+                      notifications.map(n => (
+                        <div
+                          key={n.id}
+                          className={`notif-item ${n.is_read ? '' : 'unread'}`}
+                          onClick={() => handleNotifClick(n)}
+                        >
+                          <div className="notif-item-icon">
+                            {n.notification_type === 'EXCHANGE_REQUEST' ? '📩' :
+                             n.notification_type === 'EXCHANGE_ACCEPTED' ? '🎉' :
+                             n.notification_type === 'PAYMENT_ESCROW' ? '💳' :
+                             n.notification_type === 'SESSION_COMPLETED' ? '🏆' : '🔔'}
+                          </div>
+                          <div className="notif-item-body">
+                            <div className="notif-item-title">{n.title}</div>
+                            <div className="notif-item-msg">{n.message}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Persona:</span>
               <select
@@ -172,6 +317,7 @@ function Shell() {
           {activeTab === 'barter'     && <BarterTab openChatWith={openChatWith} />}
           {activeTab === 'questions'  && <QuestionsTab />}
           {activeTab === 'mentors'    && <MentorsTab openChatWith={openChatWith} />}
+          {activeTab === 'videos'     && <VideosTab />}
           {activeTab === 'exchanges'  && <ExchangesTab />}
           {activeTab === 'chat'       && (
             <ChatTab
@@ -182,6 +328,85 @@ function Shell() {
           )}
           {activeTab === 'profile'    && <ProfileTab />}
         </main>
+      </div>
+
+      {/* ── FLOATING AI ASSISTANT CHATBOT (BOTTOM RIGHT) ── */}
+      <div className="ai-widget">
+        <button className="ai-trigger-btn" onClick={() => setAiOpen(!aiOpen)} title="SkillBridge AI Assistant">
+          <span className="ai-trigger-icon">🤖</span>
+          <span className="ai-trigger-label">AI Assistant</span>
+          <span className="ai-pulse-dot"></span>
+        </button>
+
+        {aiOpen && (
+          <div className="ai-chat-window">
+            <div className="ai-chat-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="ai-avatar-badge">🤖</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#fff' }}>SkillBridge AI Assistant</div>
+                  <div style={{ fontSize: '0.72rem', color: '#a5b4fc' }}>Online • Platform Help & FAQs</div>
+                </div>
+              </div>
+              <button className="ai-close-btn" onClick={() => setAiOpen(false)}>&times;</button>
+            </div>
+
+            <div className="ai-chat-body">
+              {aiMessages.map((msg, i) => (
+                <div key={i} className={`ai-msg ai-msg-${msg.sender}`}>
+                  <div className="ai-bubble" style={{ whiteSpace: 'pre-line' }}>
+                    {msg.text}
+                    {msg.action_link && (
+                      <div style={{ marginTop: '8px' }}>
+                        <button
+                          className="ai-action-btn"
+                          onClick={() => {
+                            const tabKey = msg.action_link.tab.replace('tab-', '');
+                            setActiveTab(tabKey);
+                          }}
+                        >
+                          🚀 {msg.action_link.label}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {msg.suggestions && (
+                    <div className="ai-quick-chips">
+                      {msg.suggestions.map((s, idx) => (
+                        <button key={idx} className="ai-chip" onClick={() => sendAIMessage(s)}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {aiThinking && (
+                <div className="ai-msg ai-msg-bot">
+                  <div className="ai-bubble" style={{ color: '#64748b', fontStyle: 'italic' }}>
+                    SkillBridge Assistant is thinking... ⏳
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <form
+              className="ai-chat-footer"
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendAIMessage();
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Ask about barter, escrow, privacy, or website issues..."
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+              />
+              <button type="submit" className="ai-send-btn">➤</button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );

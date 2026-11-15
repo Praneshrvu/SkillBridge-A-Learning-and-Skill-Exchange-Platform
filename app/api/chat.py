@@ -13,6 +13,7 @@ from app.schemas.chat import (
     CommunityMessageCreate, CommunityMessageResponse, ChatUserDirectoryItem
 )
 from app.schemas.user import UserPublic
+from app.api.notifications import create_notification
 
 router = APIRouter(prefix="/chat", tags=["Direct Chat & Messaging"])
 
@@ -95,6 +96,20 @@ def send_message(
     db.add(msg)
     db.commit()
     db.refresh(msg)
+
+    # Notify receiver of new direct message
+    try:
+        snippet = clean_content if len(clean_content) <= 60 else clean_content[:57] + "..."
+        create_notification(
+            db=db,
+            user_id=receiver.id,
+            title="New Direct Message 💬",
+            message=f"{current_user.display_name}: \"{snippet}\"",
+            notification_type="NEW_MESSAGE",
+            link_tab="tab-chat"
+        )
+    except Exception:
+        pass
     
     return format_chat_message(msg)
 

@@ -10,6 +10,7 @@ from app.models.question_bank import InterviewQuestion, QuestionVote
 from app.models.company_mentor import CompanyMentorProfile, DirectMentorQuestion
 from app.models.chat import ChatMessage, CommunityMessage
 from app.models.support import SupportTicket
+from app.models.notification import Notification
 
 def seed_database():
     print("Initializing database tables...")
@@ -597,6 +598,34 @@ def seed_database():
             priority="NORMAL"
         )
         db.add_all([ticket1, ticket2])
+        db.commit()
+
+        print("Seeding Sample Notifications...")
+        notif1 = Notification(
+            user_id=alice.id,
+            title="Barter Match Discovered! 🤝",
+            message="JavaGuru_Bob teaches Java Core and wants C++! You have a 100% reciprocal barter match.",
+            notification_type="EXCHANGE_REQUEST",
+            link_tab="tab-barter",
+            is_read=False
+        )
+        notif2 = Notification(
+            user_id=alice.id,
+            title="Escrow Payment Released 💰",
+            message="$25.00 has been released from escrow into your teacher wallet for your session with Rahul Sharma.",
+            notification_type="PAYMENT_ESCROW",
+            link_tab="tab-exchanges",
+            is_read=False
+        )
+        notif3 = Notification(
+            user_id=bob.id,
+            title="New Exchange Proposal Received! 📩",
+            message="Alice_CppMaster sent you a $0 mutual barter proposal for C++ ⇄ Java.",
+            notification_type="EXCHANGE_REQUEST",
+            link_tab="tab-exchanges",
+            is_read=False
+        )
+        db.add_all([notif1, notif2, notif3])
         db.commit()
 
         print("Database successfully seeded with realistic SkillBridge demo data!")

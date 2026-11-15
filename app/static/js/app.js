@@ -59,6 +59,7 @@ function setupNavigation() {
       if (tab.dataset.target === 'tab-chat') loadChatHub();
       if (tab.dataset.target === 'tab-support') { loadSupportFAQs(); loadSupportTickets(); }
       if (tab.dataset.target === 'tab-profile') loadMyProfile();
+      if (tab.dataset.target === 'tab-videos') loadCourseResources();
     });
   });
 }
@@ -160,6 +161,8 @@ function loadDashboardData() {
   loadMentorQuestions();
   loadSupportFAQs();
   loadSupportTickets();
+  loadNotifications();
+  loadCourseResources();
 }
 
 function switchAuthTab(tab) {
@@ -2347,15 +2350,15 @@ function showToast(message, type = 'success') {
     toast = document.createElement('div');
     toast.id = 'skillbridge-toast';
     toast.style.position = 'fixed';
-    toast.style.bottom = '20px';
-    toast.style.right = '20px';
+    toast.style.bottom = '24px';
+    toast.style.left = '24px';
     toast.style.padding = '12px 20px';
     toast.style.borderRadius = '8px';
     toast.style.color = '#fff';
     toast.style.fontWeight = '600';
     toast.style.fontSize = '0.9rem';
     toast.style.zIndex = '9999';
-    toast.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.2)';
+    toast.style.boxShadow = '0 10px 20px -3px rgba(0,0,0,0.25)';
     toast.style.transition = 'all 0.3s ease';
     document.body.appendChild(toast);
   }
@@ -2369,4 +2372,463 @@ function showToast(message, type = 'success') {
     toast.style.opacity = '0';
     setTimeout(() => { toast.style.display = 'none'; }, 300);
   }, 3200);
+}
+
+// ==================== 1. NOTIFICATIONS SYSTEM ====================
+let userNotifications = [];
+
+async function loadNotifications() {
+  if (!currentToken) return;
+  try {
+    const res = await fetch(`${API_BASE}/notifications`, {
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    userNotifications = data.notifications || [];
+    const unreadCount = data.unread_count || 0;
+
+    const badge = document.getElementById('topbar-notification-badge');
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    renderNotificationList(userNotifications);
+  } catch (err) {
+    console.warn('Failed to load notifications:', err);
+  }
+}
+
+function renderNotificationList(notifications) {
+  const container = document.getElementById('notification-list-container');
+  if (!container) return;
+
+  if (!notifications.length) {
+    container.innerHTML = `
+      <div style="padding: 2rem 1rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+        <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🔕</div>
+        No notifications yet. You will be alerted when someone sends you a proposal, accepts a session, or sends a message!
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = notifications.map(n => {
+    let icon = '🔔';
+    if (n.notification_type === 'EXCHANGE_REQUEST') icon = '📩';
+    else if (n.notification_type === 'EXCHANGE_ACCEPTED') icon = '🎉';
+    else if (n.notification_type === 'EXCHANGE_REJECTED') icon = '❌';
+    else if (n.notification_type === 'PAYMENT_ESCROW') icon = '💳';
+    else if (n.notification_type === 'SESSION_COMPLETED') icon = '🏆';
+    else if (n.notification_type === 'NEW_MESSAGE') icon = '💬';
+
+    const timeStr = formatRelativeTime(n.created_at);
+
+    return `
+      <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="handleNotificationClick(${n.id}, '${n.link_tab || ''}')">
+        <div class="notif-item-icon">${icon}</div>
+        <div class="notif-item-body">
+          <div class="notif-item-title">${escapeHtml(n.title)}</div>
+          <div class="notif-item-msg">${escapeHtml(n.message)}</div>
+          <div class="notif-item-time">${timeStr}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleNotificationDropdown() {
+  const dd = document.getElementById('notification-dropdown');
+  if (!dd) return;
+  const isHidden = dd.style.display === 'none' || dd.style.display === '';
+  dd.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    loadNotifications();
+  }
+}
+
+// Close notification dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const wrapper = document.querySelector('.notification-wrapper');
+  const dropdown = document.getElementById('notification-dropdown');
+  if (dropdown && wrapper && !wrapper.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
+
+async function handleNotificationClick(id, linkTab) {
+  try {
+    await fetch(`${API_BASE}/notifications/${id}/read`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    loadNotifications();
+  } catch (err) {}
+
+  const dd = document.getElementById('notification-dropdown');
+  if (dd) dd.style.display = 'none';
+
+  if (linkTab) {
+    switchTab(linkTab);
+  }
+}
+
+async function markAllNotificationsRead() {
+  if (!currentToken) return;
+  try {
+    await fetch(`${API_BASE}/notifications/mark-all-read`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${currentToken}` }
+    });
+    loadNotifications();
+    showToast('All notifications marked as read.');
+  } catch (err) {}
+}
+
+function formatRelativeTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffSec = Math.floor((now - d) / 1000);
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${Math.floor(diffHr / 24)}d ago`;
+}
+
+function switchTab(tabId) {
+  const targetBtn = document.querySelector(`.tab-btn[data-target="${tabId}"]`);
+  if (targetBtn) {
+    targetBtn.click();
+  }
+}
+
+// Periodically check notifications every 25 seconds
+setInterval(loadNotifications, 25000);
+
+
+// ==================== 2. AI PLATFORM ASSISTANT CHATBOT (BOTTOM RIGHT) ====================
+let isAIOpen = false;
+
+function toggleAIAssistant() {
+  const win = document.getElementById('ai-chat-window');
+  if (!win) return;
+  isAIOpen = !isAIOpen;
+  win.style.display = isAIOpen ? 'flex' : 'none';
+  if (isAIOpen) {
+    const input = document.getElementById('ai-chat-input');
+    if (input) setTimeout(() => input.focus(), 100);
+  }
+}
+
+function handleAIQuickPrompt(text) {
+  const input = document.getElementById('ai-chat-input');
+  if (input) {
+    input.value = text;
+    handleAISend(new Event('submit'));
+  }
+}
+
+async function handleAISend(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const input = document.getElementById('ai-chat-input');
+  if (!input) return;
+  const message = input.value.trim();
+  if (!message) return;
+
+  // Append user message
+  appendAIMessage('user', message);
+  input.value = '';
+
+  // Append typing indicator
+  const typingId = appendAITyping();
+
+  try {
+    const res = await fetch(`${API_BASE}/assistant/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    removeAITyping(typingId);
+    if (res.ok) {
+      const data = await res.json();
+      appendAIMessage('bot', data.reply, data.action_link, data.suggestions);
+    } else {
+      appendAIMessage('bot', 'I encountered a temporary connection issue. Please try again or check the Help & Support tab.');
+    }
+  } catch (err) {
+    removeAITyping(typingId);
+    appendAIMessage('bot', 'Network error reaching the assistant. Please ensure the SkillBridge server is running.');
+  }
+}
+
+function appendAIMessage(sender, text, actionLink = null, suggestions = []) {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `ai-msg ai-msg-${sender}`;
+
+  // Format markdown in text (bold, lists, code)
+  let formatted = escapeHtml(text);
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  formatted = formatted.replace(/`([^`]+)`/g, '<code style="background:#e2e8f0;padding:1px 4px;border-radius:4px;font-size:0.8rem;">$1</code>');
+  formatted = formatted.replace(/\n/g, '<br>');
+
+  let actionHtml = '';
+  if (actionLink && actionLink.label && actionLink.tab) {
+    actionHtml = `<div style="margin-top: 8px;"><button class="ai-action-btn" onclick="switchTab('${actionLink.tab}')">🚀 ${escapeHtml(actionLink.label)}</button></div>`;
+  }
+
+  let suggestionsHtml = '';
+  if (suggestions && suggestions.length) {
+    suggestionsHtml = `
+      <div class="ai-quick-chips">
+        ${suggestions.map(s => `<button class="ai-chip" onclick="handleAIQuickPrompt('${escapeHtml(s)}')">${escapeHtml(s)}</button>`).join('')}
+      </div>
+    `;
+  }
+
+  msgDiv.innerHTML = `
+    <div class="ai-bubble">
+      ${formatted}
+      ${actionHtml}
+    </div>
+    ${suggestionsHtml}
+  `;
+
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendAITyping() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return null;
+  const id = 'typing-' + Date.now();
+  const typingDiv = document.createElement('div');
+  typingDiv.id = id;
+  typingDiv.className = 'ai-msg ai-msg-bot';
+  typingDiv.innerHTML = `
+    <div class="ai-bubble" style="color: #64748b; font-style: italic;">
+      SkillBridge Assistant is thinking... ⏳
+    </div>
+  `;
+  container.appendChild(typingDiv);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function removeAITyping(id) {
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+
+// ==================== 3. COURSE REFERENCE VIDEOS & PAID LEARNER PERKS ====================
+let courseDataCache = null;
+let currentVideoFilter = 'ALL';
+
+async function loadCourseResources() {
+  const container = document.getElementById('course-modules-container');
+  if (!container) return;
+
+  try {
+    const headers = {};
+    if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`;
+
+    const res = await fetch(`${API_BASE}/courses/resources`, { headers });
+    if (!res.ok) throw new Error('Failed to load courses');
+    courseDataCache = await res.json();
+
+    // Update status badge
+    const pill = document.getElementById('paid-learner-status-pill');
+    if (pill) {
+      if (courseDataCache.is_paid_learner) {
+        pill.innerHTML = '⭐ Verified Paid Learner: Special Resources Unlocked!';
+        pill.style.background = '#ecfdf5';
+        pill.style.color = '#065f46';
+        pill.style.borderColor = '#a7f3d0';
+      } else {
+        pill.innerHTML = '⭐ Free Preview Active';
+        pill.style.background = '#fef3c7';
+        pill.style.color = '#92400e';
+        pill.style.borderColor = '#fde68a';
+      }
+    }
+
+    renderCourseModules();
+  } catch (err) {
+    container.innerHTML = '<div style="color: #ef4444; padding: 2rem;">Error loading course reference videos.</div>';
+  }
+}
+
+function filterVideoModules(category, btn) {
+  currentVideoFilter = category;
+  const filterBar = document.getElementById('video-filter-bar');
+  if (filterBar) {
+    filterBar.querySelectorAll('.btn').forEach(b => {
+      b.className = 'btn btn-outline btn-sm';
+    });
+    if (btn) btn.className = 'btn btn-primary btn-sm';
+  }
+  renderCourseModules();
+}
+
+function renderCourseModules() {
+  const container = document.getElementById('course-modules-container');
+  if (!container || !courseDataCache) return;
+
+  let modules = courseDataCache.modules || [];
+  if (currentVideoFilter !== 'ALL') {
+    modules = modules.filter(m => m.category === currentVideoFilter);
+  }
+
+  if (!modules.length) {
+    container.innerHTML = '<div style="padding: 2rem; color: #64748b; text-align: center;">No modules found for this category.</div>';
+    return;
+  }
+
+  const isPaid = Boolean(courseDataCache.is_paid_learner);
+
+  container.innerHTML = modules.map(mod => {
+    return `
+      <div class="course-module-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem;">
+          <div>
+            <span style="font-size: 0.75rem; text-transform: uppercase; color: #4338ca; font-weight: 700;">${escapeHtml(mod.category)}</span>
+            <h3 style="font-size: 1.25rem; color: #0f172a; margin: 0.2rem 0 0.4rem 0;">${escapeHtml(mod.skill_name)}</h3>
+            <p style="font-size: 0.88rem; color: #64748b; margin: 0; max-width: 750px;">${escapeHtml(mod.overview)}</p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="openExchangeForSkill('${escapeHtml(mod.skill_name)}')">
+            🤝 Find 1-on-1 Mentors
+          </button>
+        </div>
+
+        <!-- Reference Videos Grid -->
+        <div style="margin-top: 1.25rem;">
+          <h4 style="font-size: 0.95rem; color: #334155; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+            🎥 Recommended Reference Videos (${mod.reference_videos.length})
+          </h4>
+          <div class="video-card-grid">
+            ${mod.reference_videos.map(v => `
+              <div class="reference-video-card">
+                <div>
+                  <div class="video-thumb-preview" onclick="openVideoModal('${escapeHtml(v.title)}', '${v.video_url}', ${JSON.stringify(v.topics).replace(/"/g, '&quot;')}, '${escapeHtml(v.summary)}')">
+                    <div style="font-size: 2rem; margin-bottom: 0.25rem;">${v.thumbnail_icon || '💻'}</div>
+                    <div class="video-thumb-play-icon">▶</div>
+                    <span class="video-duration-pill">⏱️ ${escapeHtml(v.duration)}</span>
+                  </div>
+                  <h5 style="font-size: 0.95rem; color: #0f172a; margin: 0 0 4px 0;">${escapeHtml(v.title)}</h5>
+                  <div style="font-size: 0.75rem; color: #4f46e5; font-weight: 600; margin-bottom: 6px;">By ${escapeHtml(v.instructor)}</div>
+                  <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 8px 0; line-height: 1.4;">${escapeHtml(v.summary)}</p>
+                  
+                  <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                    ${v.topics.map(t => `<span style="font-size: 0.7rem; background: #e2e8f0; color: #475569; padding: 1px 6px; border-radius: 4px;">${escapeHtml(t)}</span>`).join('')}
+                  </div>
+                </div>
+
+                <button class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;" onclick="openVideoModal('${escapeHtml(v.title)}', '${v.video_url}', ${JSON.stringify(v.topics).replace(/"/g, '&quot;')}, '${escapeHtml(v.summary)}')">
+                  ▶ Watch Video Reference
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Special Paid Learner Perks & Resources -->
+        <div class="paid-perk-box">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="paid-perk-badge">Special Perks</span>
+              <strong style="color: #92400e; font-size: 0.95rem;">Paid Tutoring Extra Resources & Blueprints</strong>
+            </div>
+            ${isPaid 
+              ? `<span style="font-size: 0.8rem; color: #059669; font-weight: 700;">✅ Unlocked for your account</span>` 
+              : `<span style="font-size: 0.78rem; color: #b45309; font-weight: 600;">🔒 Unlocked with paid tutoring</span>`
+            }
+          </div>
+
+          <div class="resource-list-grid">
+            ${mod.special_resources.map(r => `
+              <div class="resource-item-card">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                    <span style="font-size: 0.72rem; color: #d97706; font-weight: 700; text-transform: uppercase;">${escapeHtml(r.perk_category)}</span>
+                    <span style="font-size: 0.7rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 4px;">${escapeHtml(r.file_format)}</span>
+                  </div>
+                  <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 4px;">${escapeHtml(r.title)}</div>
+                  <p style="font-size: 0.78rem; color: #64748b; margin: 0 0 8px 0; line-height: 1.35;">${escapeHtml(r.description)}</p>
+                </div>
+                <button class="btn ${isPaid ? 'btn-success' : 'btn-outline'} btn-sm" style="font-size: 0.75rem; padding: 4px 8px; justify-content: center;" onclick="claimPaidPerk('${escapeHtml(r.title)}', ${isPaid})">
+                  ${isPaid ? '📥 Download Resource' : '🔒 View Perk Details'}
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openVideoModal(title, url, topics, desc) {
+  const modal = document.getElementById('video-player-modal');
+  const iframe = document.getElementById('video-iframe');
+  const titleEl = document.getElementById('video-modal-title');
+  const descEl = document.getElementById('video-modal-desc');
+  const topicsEl = document.getElementById('video-modal-topics');
+  if (!modal || !iframe) return;
+
+  if (titleEl) titleEl.innerText = title;
+  if (descEl) descEl.innerText = desc;
+  if (topicsEl) {
+    topicsEl.innerHTML = (topics || []).map(t => `<span style="font-size: 0.75rem; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-weight: 600;"># ${escapeHtml(t)}</span>`).join('');
+  }
+
+  // Set URL with autoplay parameter
+  const embedUrl = url.includes('?') ? `${url}&autoplay=1` : `${url}?autoplay=1`;
+  iframe.src = embedUrl;
+  modal.style.display = 'flex';
+}
+
+function closeVideoModal() {
+  const modal = document.getElementById('video-player-modal');
+  const iframe = document.getElementById('video-iframe');
+  if (iframe) iframe.src = '';
+  if (modal) modal.style.display = 'none';
+}
+
+function claimPaidPerk(title, isUnlocked) {
+  if (isUnlocked) {
+    showToast(`📥 Accessing "${title}"! Downloading resource...`, 'success');
+  } else {
+    showToast(`🔒 "${title}" is a special paid learner perk. It unlocks automatically when you request a paid 1-on-1 tutoring session in the Teacher Catalog!`, 'error');
+  }
+}
+
+function openExchangeForSkill(skillName) {
+  switchTab('tab-catalog');
+  const searchInput = document.getElementById('catalog-search');
+  if (searchInput) {
+    searchInput.value = skillName.split(' ')[0];
+    loadTeacherCatalog();
+  }
+}
+
+function switchToBrowseTeachers() {
+  switchTab('tab-catalog');
+  const modeSelect = document.getElementById('filter-mode-select');
+  if (modeSelect) {
+    modeSelect.value = 'PAID_ONLY';
+    loadTeacherCatalog();
+  }
 }
